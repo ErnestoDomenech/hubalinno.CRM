@@ -1,0 +1,483 @@
+@page "/accounts/{Id:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AccountsApiClient AccountsApi
+@inject ContactsApiClient ContactsApi
+@inject SubscriptionsApiClient SubscriptionsApi
+@inject ProductsApiClient ProductsApi
+@inject ActivitiesApiClient ActivitiesApi
+@inject UsersApiClient UsersApi
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Cuenta</PageTitle>
+
+@if (account is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>@account.DisplayName</h1>
+        <div>
+            @if (!editing)
+            {
+                <button class="btn btn-outline-primary" @onclick="StartEdit">Editar</button>
+            }
+            <button class="btn btn-outline-danger" @onclick="DeleteAccountAsync">Eliminar cuenta</button>
+        </div>
+    </div>
+
+    @if (!editing)
+    {
+        <dl class="row mt-3">
+            <dt class="col-sm-2">Tipo</dt>
+            <dd class="col-sm-10">@(account.AccountType == AccountType.Company ? "Empresa" : "Profesional")</dd>
+            <dt class="col-sm-2">NIF/CIF</dt>
+            <dd class="col-sm-10">@account.TaxId</dd>
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@account.Email</dd>
+            <dt class="col-sm-2">Teléfono</dt>
+            <dd class="col-sm-10">@account.Phone</dd>
+            <dt class="col-sm-2">Dirección</dt>
+            <dd class="col-sm-10">@account.Address, @account.City, @account.Country</dd>
+            <dt class="col-sm-2">Notas</dt>
+            <dd class="col-sm-10">@account.Notes</dd>
+        </dl>
+    }
+    else
+    {
+        <EditForm Model="editModel" OnValidSubmit="SaveEditAsync" class="col-lg-6 mt-3">
+            <div class="mb-3">
+                <label class="form-label">Tipo de cuenta</label>
+                <select class="form-select" @bind="editModel!.AccountType">
+                    <option value="@AccountType.Individual">Profesional</option>
+                    <option value="@AccountType.Company">Empresa</option>
+                </select>
+            </div>
+            @if (editModel!.AccountType == AccountType.Company)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Nombre de la empresa</label>
+                    <InputText class="form-control" @bind-Value="editModel.CompanyName" />
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col mb-3">
+                        <label class="form-label">Nombre</label>
+                        <InputText class="form-control" @bind-Value="editModel.FirstName" />
+                    </div>
+                    <div class="col mb-3">
+                        <label class="form-label">Apellidos</label>
+                        <InputText class="form-control" @bind-Value="editModel.LastName" />
+                    </div>
+                </div>
+            }
+            <div class="mb-3">
+                <label class="form-label">NIF/CIF</label>
+                <InputText class="form-control" @bind-Value="editModel.TaxId" />
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Email</label>
+                    <InputText class="form-control" @bind-Value="editModel.Email" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">Teléfono</label>
+                    <InputText class="form-control" @bind-Value="editModel.Phone" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <InputText class="form-control" @bind-Value="editModel.Address" />
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Ciudad</label>
+                    <InputText class="form-control" @bind-Value="editModel.City" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">País</label>
+                    <InputText class="form-control" @bind-Value="editModel.Country" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Notas</label>
+                <InputTextArea class="form-control" @bind-Value="editModel.Notes" />
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="button" class="btn btn-secondary" @onclick="() => editing = false">Cancelar</button>
+        </EditForm>
+    }
+
+    <h3 class="mt-4">Contactos</h3>
+    @if (contacts is null)
+    {
+        <p>Cargando...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Puesto</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in contacts)
+                {
+                    <tr>
+                        <td>@c.FirstName @c.LastName</td>
+                        <td>@c.JobTitle</td>
+                        <td>@c.Email</td>
+                        <td>@c.Phone</td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteContactAsync(c.Id)">Eliminar</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (!addingContact)
+        {
+            <button class="btn btn-outline-primary" @onclick="() => addingContact = true">Añadir contacto</button>
+        }
+        else
+        {
+            <EditForm Model="newContact" OnValidSubmit="AddContactAsync" class="col-lg-6">
+                <div class="row">
+                    <div class="col mb-2">
+                        <InputText class="form-control" @bind-Value="newContact.FirstName" placeholder="Nombre" />
+                    </div>
+                    <div class="col mb-2">
+                        <InputText class="form-control" @bind-Value="newContact.LastName" placeholder="Apellidos" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col mb-2">
+                        <InputText class="form-control" @bind-Value="newContact.JobTitle" placeholder="Puesto" />
+                    </div>
+                    <div class="col mb-2">
+                        <InputText class="form-control" @bind-Value="newContact.Email" placeholder="Email" />
+                    </div>
+                    <div class="col mb-2">
+                        <InputText class="form-control" @bind-Value="newContact.Phone" placeholder="Teléfono" />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar contacto</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => addingContact = false">Cancelar</button>
+            </EditForm>
+        }
+    }
+
+    <h3 class="mt-4">Suscripciones</h3>
+    @if (subscriptions is null)
+    {
+        <p>Cargando...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Estado</th>
+                    <th>Cantidad</th>
+                    <th>Renovación</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in subscriptions)
+                {
+                    <tr>
+                        <td>@s.ProductName</td>
+                        <td>@StatusLabel(s.Status)</td>
+                        <td>@s.Quantity</td>
+                        <td>@(s.RenewalDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSubscriptionAsync(s.Id)">Eliminar</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (!addingSubscription)
+        {
+            <button class="btn btn-outline-primary" @onclick="StartAddSubscription">Añadir suscripción</button>
+        }
+        else
+        {
+            <EditForm Model="newSubscription" OnValidSubmit="AddSubscriptionAsync" class="col-lg-6">
+                <div class="mb-2">
+                    <select class="form-select" @bind="newSubscription.ProductId">
+                        <option value="0">Selecciona un producto</option>
+                        @foreach (var p in products ?? [])
+                        {
+                            <option value="@p.Id">@p.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col mb-2">
+                        <select class="form-select" @bind="newSubscription.Status">
+                            @foreach (var s in Enum.GetValues<SubscriptionStatus>())
+                            {
+                                <option value="@s">@StatusLabel(s)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col mb-2">
+                        <InputNumber class="form-control" @bind-Value="newSubscription.Quantity" placeholder="Cantidad" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col mb-2">
+                        <label class="form-label">Inicio</label>
+                        <InputDate class="form-control" @bind-Value="newSubscription.StartDate" />
+                    </div>
+                    <div class="col mb-2">
+                        <label class="form-label">Renovación</label>
+                        <InputDate class="form-control" @bind-Value="newSubscription.RenewalDate" />
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar suscripción</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => addingSubscription = false">Cancelar</button>
+            </EditForm>
+        }
+    }
+
+    <h3 class="mt-4">Actividades</h3>
+    @if (activities is null)
+    {
+        <p>Cargando...</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Asunto</th>
+                    <th>Asignado a</th>
+                    <th>Fecha límite</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var act in activities)
+                {
+                    <tr>
+                        <td>@ActivityTypeLabel(act.Type)</td>
+                        <td>@act.Subject</td>
+                        <td>@act.AssignedToName</td>
+                        <td>@(act.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(act.Status == ActivityStatus.Done ? "Completada" : "Pendiente")</td>
+                        <td>
+                            @if (act.Status == ActivityStatus.Pending)
+                            {
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => CompleteActivityAsync(act)">Completar</button>
+                            }
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteActivityAsync(act.Id)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (!addingActivity)
+        {
+            <button class="btn btn-outline-primary" @onclick="StartAddActivity">Añadir actividad</button>
+        }
+        else
+        {
+            <EditForm Model="newActivity" OnValidSubmit="AddActivityAsync" class="col-lg-6">
+                <div class="row">
+                    <div class="col mb-2">
+                        <select class="form-select" @bind="newActivity.Type">
+                            @foreach (var t in Enum.GetValues<ActivityType>())
+                            {
+                                <option value="@t">@ActivityTypeLabel(t)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col mb-2">
+                        <select class="form-select" @bind="newActivity.AssignedToUserId">
+                            <option value="">Sin asignar</option>
+                            @foreach (var u in users ?? [])
+                            {
+                                <option value="@u.Id">@u.FullName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <InputText class="form-control" @bind-Value="newActivity.Subject" placeholder="Asunto" />
+                </div>
+                <div class="mb-2">
+                    <InputDate class="form-control" @bind-Value="newActivity.DueDate" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar actividad</button>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="() => addingActivity = false">Cancelar</button>
+            </EditForm>
+        }
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private AccountDto? account;
+    private AccountDto? editModel;
+    private List<ContactDto>? contacts;
+    private List<SubscriptionDto>? subscriptions;
+    private List<ProductDto>? products;
+    private List<ActivityDto>? activities;
+    private List<UserSummaryDto>? users;
+    private bool editing;
+    private bool addingContact;
+    private bool addingSubscription;
+    private bool addingActivity;
+    private ContactDto newContact = new();
+    private SubscriptionDto newSubscription = new();
+    private ActivityDto newActivity = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        account = await AccountsApi.GetByIdAsync(Id);
+        contacts = await ContactsApi.GetByAccountAsync(Id);
+        subscriptions = await SubscriptionsApi.GetAllAsync(accountId: Id);
+        activities = await ActivitiesApi.GetAllAsync(accountId: Id);
+    }
+
+    private void StartEdit()
+    {
+        editModel = new AccountDto
+        {
+            Id = account!.Id,
+            AccountType = account.AccountType,
+            CompanyName = account.CompanyName,
+            FirstName = account.FirstName,
+            LastName = account.LastName,
+            TaxId = account.TaxId,
+            Email = account.Email,
+            Phone = account.Phone,
+            Address = account.Address,
+            City = account.City,
+            Country = account.Country,
+            Notes = account.Notes,
+        };
+        editing = true;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        await AccountsApi.UpdateAsync(editModel!);
+        editing = false;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAccountAsync()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta cuenta y todos sus contactos?");
+        if (!confirmed) return;
+
+        await AccountsApi.DeleteAsync(Id);
+        Nav.NavigateTo("/accounts");
+    }
+
+    private async Task AddContactAsync()
+    {
+        newContact.AccountId = Id;
+        await ContactsApi.CreateAsync(newContact);
+        newContact = new ContactDto();
+        addingContact = false;
+        contacts = await ContactsApi.GetByAccountAsync(Id);
+    }
+
+    private async Task DeleteContactAsync(int contactId)
+    {
+        await ContactsApi.DeleteAsync(contactId);
+        contacts = await ContactsApi.GetByAccountAsync(Id);
+    }
+
+    private async Task StartAddSubscription()
+    {
+        products = await ProductsApi.GetAllAsync();
+        newSubscription = new SubscriptionDto { AccountId = Id, StartDate = DateTime.Today, Quantity = 1 };
+        addingSubscription = true;
+    }
+
+    private async Task AddSubscriptionAsync()
+    {
+        if (newSubscription.ProductId == 0) return;
+
+        newSubscription.AccountId = Id;
+        await SubscriptionsApi.CreateAsync(newSubscription);
+        addingSubscription = false;
+        subscriptions = await SubscriptionsApi.GetAllAsync(accountId: Id);
+    }
+
+    private async Task DeleteSubscriptionAsync(int subscriptionId)
+    {
+        await SubscriptionsApi.DeleteAsync(subscriptionId);
+        subscriptions = await SubscriptionsApi.GetAllAsync(accountId: Id);
+    }
+
+    private static string StatusLabel(SubscriptionStatus s) => s switch
+    {
+        SubscriptionStatus.Trial => "Prueba",
+        SubscriptionStatus.Active => "Activa",
+        SubscriptionStatus.PastDue => "Pago pendiente",
+        SubscriptionStatus.Cancelled => "Cancelada",
+        SubscriptionStatus.Expired => "Vencida",
+        _ => s.ToString(),
+    };
+
+    private async Task StartAddActivity()
+    {
+        users = await UsersApi.GetAllAsync();
+        newActivity = new ActivityDto { AccountId = Id, Type = ActivityType.Task };
+        addingActivity = true;
+    }
+
+    private async Task AddActivityAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newActivity.Subject)) return;
+
+        newActivity.AccountId = Id;
+        await ActivitiesApi.CreateAsync(newActivity);
+        addingActivity = false;
+        activities = await ActivitiesApi.GetAllAsync(accountId: Id);
+    }
+
+    private async Task CompleteActivityAsync(ActivityDto act)
+    {
+        act.Status = ActivityStatus.Done;
+        await ActivitiesApi.UpdateAsync(act);
+        activities = await ActivitiesApi.GetAllAsync(accountId: Id);
+    }
+
+    private async Task DeleteActivityAsync(int activityId)
+    {
+        await ActivitiesApi.DeleteAsync(activityId);
+        activities = await ActivitiesApi.GetAllAsync(accountId: Id);
+    }
+
+    private static string ActivityTypeLabel(ActivityType t) => t switch
+    {
+        ActivityType.Call => "Llamada",
+        ActivityType.Email => "Email",
+        ActivityType.Meeting => "Reunión",
+        ActivityType.Task => "Tarea",
+        ActivityType.Note => "Nota",
+        _ => t.ToString(),
+    };
+}

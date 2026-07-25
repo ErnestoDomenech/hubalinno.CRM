@@ -1,0 +1,147 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = Hubalinno.CRM.Shared.AppRoles.Admin)]
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Hubalinno.CRM.Shared
+@using Hubalinno.CRM.Web.Components.Account
+@using Hubalinno.CRM.Web.Components.Account.Shared
+@using Hubalinno.CRM.Web.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Usuarios</PageTitle>
+
+<h1>Usuarios</h1>
+
+<StatusMessage Message="@message" />
+
+<h3>Nuevo usuario</h3>
+<div class="row">
+    <div class="col-lg-6">
+        <EditForm Model="Input" FormName="create-user" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" placeholder="name@hubalinno.com" />
+                <label for="Input.Email">Email</label>
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.FullName" id="Input.FullName" class="form-control" placeholder="Nombre completo" />
+                <label for="Input.FullName">Nombre completo</label>
+                <ValidationMessage For="() => Input.FullName" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" placeholder="Contraseña temporal" />
+                <label for="Input.Password">Contraseña temporal</label>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.Role" id="Input.Role" class="form-select">
+                    @foreach (var role in AppRoles.All)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </InputSelect>
+                <label for="Input.Role">Rol</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Crear usuario</button>
+        </EditForm>
+    </div>
+</div>
+
+<h3 class="mt-4">Usuarios existentes</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Nombre</th>
+            <th>Roles</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in userRows)
+        {
+            <tr>
+                <td>@row.User.Email</td>
+                <td>@row.User.FullName</td>
+                <td>@string.Join(", ", row.Roles)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private string? message;
+    private List<(ApplicationUser User, IList<string> Roles)> userRows = [];
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        userRows.Clear();
+        foreach (var user in UserManager.Users.OrderBy(u => u.Email).ToList())
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            userRows.Add((user, roles));
+        }
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var existing = await UserManager.FindByEmailAsync(Input.Email);
+        if (existing is not null)
+        {
+            message = "Error: ya existe un usuario con ese email.";
+            return;
+        }
+
+        var user = new ApplicationUser
+        {
+            UserName = Input.Email,
+            Email = Input.Email,
+            FullName = Input.FullName,
+            EmailConfirmed = true,
+        };
+
+        var result = await UserManager.CreateAsync(user, Input.Password);
+        if (!result.Succeeded)
+        {
+            message = $"Error: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            return;
+        }
+
+        await UserManager.AddToRoleAsync(user, Input.Role);
+
+        RedirectManager.RedirectToCurrentPage();
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string FullName { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "La {0} debe tener entre {2} y {1} caracteres.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Required]
+        public string Role { get; set; } = AppRoles.Sales;
+    }
+}

@@ -1,0 +1,91 @@
+@page "/accounts/new"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AccountsApiClient AccountsApi
+@inject NavigationManager Nav
+
+<PageTitle>Nueva cuenta</PageTitle>
+
+<h1>Nueva cuenta</h1>
+
+<EditForm Model="model" OnValidSubmit="SaveAsync" class="col-lg-6">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger" />
+
+    <div class="mb-3">
+        <label class="form-label">Tipo de cuenta</label>
+        <select class="form-select" @bind="model.AccountType">
+            <option value="@AccountType.Individual">Profesional</option>
+            <option value="@AccountType.Company">Empresa</option>
+        </select>
+    </div>
+
+    @if (model.AccountType == AccountType.Company)
+    {
+        <div class="mb-3">
+            <label class="form-label">Nombre de la empresa</label>
+            <InputText class="form-control" @bind-Value="model.CompanyName" />
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Nombre</label>
+                <InputText class="form-control" @bind-Value="model.FirstName" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Apellidos</label>
+                <InputText class="form-control" @bind-Value="model.LastName" />
+            </div>
+        </div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">NIF/CIF</label>
+        <InputText class="form-control" @bind-Value="model.TaxId" />
+    </div>
+    <div class="row">
+        <div class="col mb-3">
+            <label class="form-label">Email</label>
+            <InputText class="form-control" @bind-Value="model.Email" />
+        </div>
+        <div class="col mb-3">
+            <label class="form-label">Teléfono</label>
+            <InputText class="form-control" @bind-Value="model.Phone" />
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Dirección</label>
+        <InputText class="form-control" @bind-Value="model.Address" />
+    </div>
+    <div class="row">
+        <div class="col mb-3">
+            <label class="form-label">Ciudad</label>
+            <InputText class="form-control" @bind-Value="model.City" />
+        </div>
+        <div class="col mb-3">
+            <label class="form-label">País</label>
+            <InputText class="form-control" @bind-Value="model.Country" />
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Notas</label>
+        <InputTextArea class="form-control" @bind-Value="model.Notes" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <button type="button" class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/accounts")'>Cancelar</button>
+</EditForm>
+
+@code {
+    private readonly AccountDto model = new() { AccountType = AccountType.Company };
+
+    private async Task SaveAsync()
+    {
+        var created = await AccountsApi.CreateAsync(model);
+        if (created is not null)
+        {
+            Nav.NavigateTo($"/accounts/{created.Id}");
+        }
+    }
+}

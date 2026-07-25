@@ -1,0 +1,184 @@
+@page "/activities"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject ActivitiesApiClient ActivitiesApi
+@inject AccountsApiClient AccountsApi
+@inject UsersApiClient UsersApi
+
+<PageTitle>Actividades</PageTitle>
+
+<h1>Actividades</h1>
+
+<div class="row mb-3 g-2 align-items-end">
+    <div class="col-auto form-check mt-4">
+        <input class="form-check-input" type="checkbox" id="onlyMine" @bind="onlyMine" @bind:after="LoadAsync" />
+        <label class="form-check-label" for="onlyMine">Solo mis tareas</label>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Estado</label>
+        <select class="form-select" @bind="selectedStatus" @bind:after="LoadAsync">
+            <option value="">Todos</option>
+            <option value="@ActivityStatus.Pending">Pendiente</option>
+            <option value="@ActivityStatus.Done">Completada</option>
+        </select>
+    </div>
+    <div class="col-auto ms-auto">
+        @if (!creating)
+        {
+            <button class="btn btn-primary" @onclick="StartCreate">Nueva actividad</button>
+        }
+    </div>
+</div>
+
+@if (creating)
+{
+    <EditForm Model="newActivity" OnValidSubmit="SaveAsync" class="col-lg-8 border rounded p-3 mb-4">
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Tipo</label>
+                <select class="form-select" @bind="newActivity.Type">
+                    @foreach (var t in Enum.GetValues<ActivityType>())
+                    {
+                        <option value="@t">@TypeLabel(t)</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Cuenta (opcional)</label>
+                <select class="form-select" @bind="newActivity.AccountId">
+                    <option value="">Ninguna</option>
+                    @foreach (var a in accounts ?? [])
+                    {
+                        <option value="@a.Id">@a.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Asignado a</label>
+                <select class="form-select" @bind="newActivity.AssignedToUserId">
+                    <option value="">Sin asignar</option>
+                    @foreach (var u in users ?? [])
+                    {
+                        <option value="@u.Id">@u.FullName</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Asunto</label>
+            <InputText class="form-control" @bind-Value="newActivity.Subject" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <InputTextArea class="form-control" @bind-Value="newActivity.Description" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Fecha límite</label>
+            <InputDate class="form-control" @bind-Value="newActivity.DueDate" />
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => creating = false">Cancelar</button>
+    </EditForm>
+}
+
+@if (activities is null)
+{
+    <p>Cargando...</p>
+}
+else if (activities.Count == 0)
+{
+    <p>No hay actividades que coincidan con el filtro.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Asunto</th>
+                <th>Cuenta</th>
+                <th>Asignado a</th>
+                <th>Fecha límite</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var act in activities)
+            {
+                <tr class="@(act.Status == ActivityStatus.Pending && act.DueDate.HasValue && act.DueDate < DateTime.Today ? "table-danger" : "")">
+                    <td>@TypeLabel(act.Type)</td>
+                    <td>@act.Subject</td>
+                    <td>@act.AccountDisplayName</td>
+                    <td>@act.AssignedToName</td>
+                    <td>@(act.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    <td>@(act.Status == ActivityStatus.Done ? "Completada" : "Pendiente")</td>
+                    <td>
+                        @if (act.Status == ActivityStatus.Pending)
+                        {
+                            <button class="btn btn-sm btn-outline-success" @onclick="() => CompleteAsync(act)">Completar</button>
+                        }
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(act.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ActivityDto>? activities;
+    private List<AccountDto>? accounts;
+    private List<UserSummaryDto>? users;
+    private bool onlyMine = true;
+    private string selectedStatus = "";
+    private bool creating;
+    private ActivityDto newActivity = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        ActivityStatus? status = string.IsNullOrEmpty(selectedStatus) ? null : Enum.Parse<ActivityStatus>(selectedStatus);
+        activities = await ActivitiesApi.GetAllAsync(status: status, onlyMine: onlyMine);
+    }
+
+    private async Task StartCreate()
+    {
+        accounts = await AccountsApi.GetAllAsync();
+        users = await UsersApi.GetAllAsync();
+        newActivity = new ActivityDto { Type = ActivityType.Task };
+        creating = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newActivity.Subject)) return;
+
+        await ActivitiesApi.CreateAsync(newActivity);
+        creating = false;
+        await LoadAsync();
+    }
+
+    private async Task CompleteAsync(ActivityDto act)
+    {
+        act.Status = ActivityStatus.Done;
+        await ActivitiesApi.UpdateAsync(act);
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await ActivitiesApi.DeleteAsync(id);
+        await LoadAsync();
+    }
+
+    private static string TypeLabel(ActivityType t) => t switch
+    {
+        ActivityType.Call => "Llamada",
+        ActivityType.Email => "Email",
+        ActivityType.Meeting => "Reunión",
+        ActivityType.Task => "Tarea",
+        ActivityType.Note => "Nota",
+        _ => t.ToString(),
+    };
+}

@@ -1,0 +1,192 @@
+@page "/subscriptions"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject SubscriptionsApiClient SubscriptionsApi
+@inject AccountsApiClient AccountsApi
+@inject ProductsApiClient ProductsApi
+
+<PageTitle>Suscripciones</PageTitle>
+
+<h1>Suscripciones</h1>
+
+<div class="row mb-3 g-2 align-items-end">
+    <div class="col-auto">
+        <label class="form-label">Línea de negocio</label>
+        <select class="form-select" @bind="selectedLine" @bind:after="LoadAsync">
+            <option value="">Todas</option>
+            <option value="@BusinessLine.Academy">Academy</option>
+            <option value="@BusinessLine.DecisionLab">DecisionLab</option>
+            <option value="@BusinessLine.TimeOn">TimeOn</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Estado</label>
+        <select class="form-select" @bind="selectedStatus" @bind:after="LoadAsync">
+            <option value="">Todos</option>
+            @foreach (var s in Enum.GetValues<SubscriptionStatus>())
+            {
+                <option value="@s">@StatusLabel(s)</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto ms-auto">
+        @if (!creating)
+        {
+            <button class="btn btn-primary" @onclick="StartCreate">Nueva suscripción</button>
+        }
+    </div>
+</div>
+
+@if (creating)
+{
+    <EditForm Model="newSub" OnValidSubmit="SaveAsync" class="col-lg-8 border rounded p-3 mb-4">
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Cuenta</label>
+                <select class="form-select" @bind="newSub.AccountId">
+                    <option value="0">Selecciona una cuenta</option>
+                    @foreach (var a in accounts ?? [])
+                    {
+                        <option value="@a.Id">@a.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Producto</label>
+                <select class="form-select" @bind="newSub.ProductId">
+                    <option value="0">Selecciona un producto</option>
+                    @foreach (var p in products ?? [])
+                    {
+                        <option value="@p.Id">@p.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Estado</label>
+                <select class="form-select" @bind="newSub.Status">
+                    @foreach (var s in Enum.GetValues<SubscriptionStatus>())
+                    {
+                        <option value="@s">@StatusLabel(s)</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Cantidad</label>
+                <InputNumber class="form-control" @bind-Value="newSub.Quantity" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Fecha de inicio</label>
+                <InputDate class="form-control" @bind-Value="newSub.StartDate" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Próxima renovación</label>
+                <InputDate class="form-control" @bind-Value="newSub.RenewalDate" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Notas</label>
+            <InputTextArea class="form-control" @bind-Value="newSub.Notes" />
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => creating = false">Cancelar</button>
+    </EditForm>
+}
+
+@if (subscriptions is null)
+{
+    <p>Cargando...</p>
+}
+else if (subscriptions.Count == 0)
+{
+    <p>No hay suscripciones que coincidan con el filtro.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Cuenta</th>
+                <th>Producto</th>
+                <th>Estado</th>
+                <th>Cantidad</th>
+                <th>Renovación</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in subscriptions)
+            {
+                <tr class="@RowClass(s)">
+                    <td>@s.AccountDisplayName</td>
+                    <td>@s.ProductName</td>
+                    <td>@StatusLabel(s.Status)</td>
+                    <td>@s.Quantity</td>
+                    <td>@(s.RenewalDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(s.Id)">Eliminar</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SubscriptionDto>? subscriptions;
+    private List<AccountDto>? accounts;
+    private List<ProductDto>? products;
+    private string selectedLine = "";
+    private string selectedStatus = "";
+    private bool creating;
+    private SubscriptionDto newSub = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        BusinessLine? line = string.IsNullOrEmpty(selectedLine) ? null : Enum.Parse<BusinessLine>(selectedLine);
+        SubscriptionStatus? status = string.IsNullOrEmpty(selectedStatus) ? null : Enum.Parse<SubscriptionStatus>(selectedStatus);
+        subscriptions = await SubscriptionsApi.GetAllAsync(line, status);
+    }
+
+    private async Task StartCreate()
+    {
+        accounts = await AccountsApi.GetAllAsync();
+        products = await ProductsApi.GetAllAsync();
+        newSub = new SubscriptionDto { StartDate = DateTime.Today, Quantity = 1 };
+        creating = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (newSub.AccountId == 0 || newSub.ProductId == 0) return;
+
+        await SubscriptionsApi.CreateAsync(newSub);
+        creating = false;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await SubscriptionsApi.DeleteAsync(id);
+        await LoadAsync();
+    }
+
+    private static string StatusLabel(SubscriptionStatus s) => s switch
+    {
+        SubscriptionStatus.Trial => "Prueba",
+        SubscriptionStatus.Active => "Activa",
+        SubscriptionStatus.PastDue => "Pago pendiente",
+        SubscriptionStatus.Cancelled => "Cancelada",
+        SubscriptionStatus.Expired => "Vencida",
+        _ => s.ToString(),
+    };
+
+    private static string RowClass(SubscriptionDto s)
+    {
+        if (s.Status is SubscriptionStatus.Cancelled or SubscriptionStatus.Expired) return "table-secondary";
+        if (s.RenewalDate.HasValue && s.RenewalDate.Value <= DateTime.Today.AddDays(30)) return "table-warning";
+        return "";
+    }
+}

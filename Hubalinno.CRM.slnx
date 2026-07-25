@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hubalinno.CRM.Shared/Hubalinno.CRM.Shared.csproj" />
+    <Project Path="src/Hubalinno.CRM.Web.Client/Hubalinno.CRM.Web.Client.csproj" />
+    <Project Path="src/Hubalinno.CRM.Web/Hubalinno.CRM.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Hubalinno.CRM.Web.Tests/Hubalinno.CRM.Web.Tests.csproj" />
+  </Folder>
+</Solution>

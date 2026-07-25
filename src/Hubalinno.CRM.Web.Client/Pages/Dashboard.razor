@@ -1,0 +1,75 @@
+@page "/"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject DashboardApiClient DashboardApi
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Panel general</h1>
+
+@if (summary is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Cuentas totales</div>
+                    <div class="fs-2">@summary.TotalAccounts</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Mis tareas pendientes</div>
+                    <div class="fs-2">@summary.PendingActivitiesMine</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @foreach (var line in summary.Lines)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <strong>@LineLabel(line.BusinessLine)</strong>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-8">Suscripciones activas</dt>
+                            <dd class="col-4 text-end">@line.ActiveSubscriptions</dd>
+                            <dt class="col-8">Por vencer (30 días)</dt>
+                            <dd class="col-4 text-end @(line.ExpiringSoon > 0 ? "text-danger fw-bold" : "")">@line.ExpiringSoon</dd>
+                            <dt class="col-8">Oportunidades abiertas</dt>
+                            <dd class="col-4 text-end">@line.OpenOpportunities</dd>
+                            <dt class="col-8">Valor en pipeline</dt>
+                            <dd class="col-4 text-end">@line.OpenOpportunitiesValue.ToString("C0")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private DashboardSummaryDto? summary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        summary = await DashboardApi.GetSummaryAsync();
+    }
+
+    private static string LineLabel(BusinessLine line) => line switch
+    {
+        BusinessLine.Academy => "Hubalinno Academy",
+        BusinessLine.DecisionLab => "DecisionLab",
+        BusinessLine.TimeOn => "TimeOn",
+        _ => line.ToString(),
+    };
+}

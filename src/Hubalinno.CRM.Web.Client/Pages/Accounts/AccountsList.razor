@@ -1,0 +1,75 @@
+@page "/accounts"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AccountsApiClient AccountsApi
+@inject NavigationManager Nav
+
+<PageTitle>Cuentas</PageTitle>
+
+<h1>Cuentas</h1>
+
+<div class="row mb-3 g-2 align-items-end">
+    <div class="col-auto">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" @bind="selectedType" @bind:after="LoadAsync">
+            <option value="">Todos</option>
+            <option value="@AccountType.Individual">Profesional</option>
+            <option value="@AccountType.Company">Empresa</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Buscar</label>
+        <input class="form-control" @bind="search" @bind:event="oninput" @bind:after="LoadAsync" placeholder="Nombre o email" />
+    </div>
+    <div class="col-auto ms-auto">
+        <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/accounts/new")'>Nueva cuenta</button>
+    </div>
+</div>
+
+@if (accounts is null)
+{
+    <p>Cargando...</p>
+}
+else if (accounts.Count == 0)
+{
+    <p>No hay cuentas que coincidan con el filtro.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th>Ciudad</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var account in accounts)
+            {
+                <tr style="cursor:pointer" @onclick='() => Nav.NavigateTo($"/accounts/{account.Id}")'>
+                    <td>@account.DisplayName</td>
+                    <td>@(account.AccountType == AccountType.Company ? "Empresa" : "Profesional")</td>
+                    <td>@account.Email</td>
+                    <td>@account.Phone</td>
+                    <td>@account.City</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AccountDto>? accounts;
+    private string selectedType = "";
+    private string search = "";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        AccountType? type = string.IsNullOrEmpty(selectedType) ? null : Enum.Parse<AccountType>(selectedType);
+        accounts = await AccountsApi.GetAllAsync(type, search);
+    }
+}

@@ -1,0 +1,37 @@
+@inherits LayoutComponentBase
+@using Hubalinno.CRM.Shared
+
+<div class="page">
+    <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+        <a class="navbar-brand" href="">Hubalinno CRM</a>
+        <AuthorizeView>
+            <Authorized>
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="accounts">Cuentas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="opportunities">Oportunidades</a></li>
+                    <li class="nav-item"><a class="nav-link" href="subscriptions">Suscripciones</a></li>
+                    <li class="nav-item"><a class="nav-link" href="activities">Actividades</a></li>
+                    <AuthorizeView Roles="@AppRoles.Admin" Context="adminContext">
+                        <li class="nav-item"><a class="nav-link" href="admin/users">Usuarios</a></li>
+                    </AuthorizeView>
+                </ul>
+                <span class="navbar-text text-light me-3">@context.User.Identity?.Name</span>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="" />
+                    <button type="submit" class="btn btn-outline-light btn-sm">Cerrar sesión</button>
+                </form>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+
+    <main class="container-fluid p-4">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

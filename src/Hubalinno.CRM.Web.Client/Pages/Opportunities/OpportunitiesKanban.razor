@@ -1,0 +1,174 @@
+@page "/opportunities"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject OpportunitiesApiClient OpportunitiesApi
+@inject AccountsApiClient AccountsApi
+@inject ContactsApiClient ContactsApi
+@inject ProductsApiClient ProductsApi
+
+<PageTitle>Oportunidades</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Oportunidades</h1>
+    <div>
+        <select class="form-select d-inline-block w-auto me-2" @bind="selectedLine" @bind:after="LoadAsync">
+            <option value="">Todas las líneas</option>
+            <option value="@BusinessLine.Academy">Academy</option>
+            <option value="@BusinessLine.DecisionLab">DecisionLab</option>
+            <option value="@BusinessLine.TimeOn">TimeOn</option>
+        </select>
+        @if (!creating)
+        {
+            <button class="btn btn-primary" @onclick="StartCreate">Nueva oportunidad</button>
+        }
+    </div>
+</div>
+
+@if (creating)
+{
+    <EditForm Model="newOpp" OnValidSubmit="SaveAsync" class="col-lg-8 border rounded p-3 mb-4">
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Cuenta</label>
+                <select class="form-select" @bind="newOpp.AccountId" @bind:after="OnAccountChangedAsync">
+                    <option value="0">Selecciona una cuenta</option>
+                    @foreach (var a in accounts ?? [])
+                    {
+                        <option value="@a.Id">@a.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Contacto (opcional)</label>
+                <select class="form-select" @bind="newOpp.ContactId">
+                    <option value="">Ninguno</option>
+                    @foreach (var c in accountContacts ?? [])
+                    {
+                        <option value="@c.Id">@c.FirstName @c.LastName</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Producto</label>
+                <select class="form-select" @bind="newOpp.ProductId">
+                    <option value="0">Selecciona un producto</option>
+                    @foreach (var p in products ?? [])
+                    {
+                        <option value="@p.Id">@p.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Valor estimado (€)</label>
+                <InputNumber class="form-control" @bind-Value="newOpp.EstimatedValue" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Cierre estimado</label>
+                <InputDate class="form-control" @bind-Value="newOpp.ExpectedCloseDate" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => creating = false">Cancelar</button>
+    </EditForm>
+}
+
+@if (opportunities is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="d-flex gap-2 overflow-auto">
+        @foreach (var stage in Enum.GetValues<OpportunityStage>())
+        {
+            <div class="border rounded p-2" style="min-width:220px; flex:1;">
+                <h6 class="text-center">@StageLabel(stage)</h6>
+                @foreach (var opp in opportunities.Where(o => o.Stage == stage))
+                {
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <div class="fw-bold">@opp.AccountDisplayName</div>
+                            <div class="small text-muted">@opp.ProductName</div>
+                            <div class="small">@opp.EstimatedValue.ToString("C0")</div>
+                            @if (opp.ExpectedCloseDate.HasValue)
+                            {
+                                <div class="small text-muted">@opp.ExpectedCloseDate.Value.ToString("dd/MM/yyyy")</div>
+                            }
+                            <div class="d-flex justify-content-between mt-1">
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@(stage == OpportunityStage.New)" @onclick="() => MoveAsync(opp, -1)">◀</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(opp.Id)">✕</button>
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@(stage == OpportunityStage.Lost)" @onclick="() => MoveAsync(opp, 1)">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<OpportunityDto>? opportunities;
+    private List<AccountDto>? accounts;
+    private List<ContactDto>? accountContacts;
+    private List<ProductDto>? products;
+    private string selectedLine = "";
+    private bool creating;
+    private OpportunityDto newOpp = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        BusinessLine? line = string.IsNullOrEmpty(selectedLine) ? null : Enum.Parse<BusinessLine>(selectedLine);
+        opportunities = await OpportunitiesApi.GetAllAsync(line);
+    }
+
+    private async Task StartCreate()
+    {
+        accounts = await AccountsApi.GetAllAsync();
+        products = await ProductsApi.GetAllAsync();
+        newOpp = new OpportunityDto();
+        creating = true;
+    }
+
+    private async Task OnAccountChangedAsync()
+    {
+        accountContacts = newOpp.AccountId > 0 ? await ContactsApi.GetByAccountAsync(newOpp.AccountId) : [];
+    }
+
+    private async Task SaveAsync()
+    {
+        if (newOpp.AccountId == 0 || newOpp.ProductId == 0) return;
+
+        await OpportunitiesApi.CreateAsync(newOpp);
+        creating = false;
+        await LoadAsync();
+    }
+
+    private async Task MoveAsync(OpportunityDto opp, int direction)
+    {
+        var newStage = (OpportunityStage)((int)opp.Stage + direction);
+        opp.Stage = newStage;
+        await OpportunitiesApi.UpdateAsync(opp);
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await OpportunitiesApi.DeleteAsync(id);
+        await LoadAsync();
+    }
+
+    private static string StageLabel(OpportunityStage s) => s switch
+    {
+        OpportunityStage.New => "Nueva",
+        OpportunityStage.Qualified => "Calificada",
+        OpportunityStage.ProposalSent => "Propuesta enviada",
+        OpportunityStage.Negotiation => "Negociación",
+        OpportunityStage.Won => "Ganada",
+        OpportunityStage.Lost => "Perdida",
+        _ => s.ToString(),
+    };
+}
