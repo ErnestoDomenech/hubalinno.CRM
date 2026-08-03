@@ -5,7 +5,10 @@ public class ActivityDto
     public int Id { get; set; }
     public int? AccountId { get; set; }
     public string? AccountDisplayName { get; set; }
+    public int? ContactId { get; set; }
+    public string? ContactName { get; set; }
     public int? OpportunityId { get; set; }
+    public BusinessLine? BusinessLine { get; set; }
     public ActivityType Type { get; set; }
     public string Subject { get; set; } = "";
     public string? Description { get; set; }

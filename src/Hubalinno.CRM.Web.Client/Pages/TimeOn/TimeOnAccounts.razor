@@ -1,0 +1,115 @@
+@page "/timeon/accounts"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject AccountsApiClient AccountsApi
+@inject NavigationManager Nav
+
+<PageTitle>Cuentas TimeOn</PageTitle>
+
+<h1>Cuentas TimeOn</h1>
+
+<div class="btn-group mb-3" role="group">
+    <button class="btn @(view == "all" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetView("all")'>Todas</button>
+    <button class="btn @(view == "today" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetView("today")'>Para contactar hoy</button>
+    <button class="btn @(view == "priorityA" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetView("priorityA")'>Prioridad A</button>
+    <button class="btn @(view == "never" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetView("never")'>Sin contactar todavía</button>
+</div>
+
+@if (accounts is null)
+{
+    <p>Cargando...</p>
+}
+else if (accounts.Count == 0)
+{
+    <p>No hay cuentas en esta vista.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Cuenta</th>
+                <th>Sector</th>
+                <th>Provincia</th>
+                <th>Prioridad</th>
+                <th>Origen</th>
+                <th>Website</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in accounts)
+            {
+                <tr style="cursor:pointer" @onclick='() => Nav.NavigateTo($"/accounts/{a.Id}")'>
+                    <td>@a.DisplayName</td>
+                    <td>@a.Industry</td>
+                    <td>@a.Province</td>
+                    <td>@a.LeadPriority</td>
+                    <td>@a.LeadSource</td>
+                    <td>@a.Website</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h3 class="mt-4">Añadir cuenta existente a TimeOn</h3>
+<div class="row g-2 col-lg-8">
+    <div class="col-auto flex-grow-1">
+        <input class="form-control" @bind="search" @bind:event="oninput" @bind:after="SearchAsync" placeholder="Buscar cuenta por nombre o email" />
+    </div>
+</div>
+@if (searchResults is not null)
+{
+    <table class="table mt-2">
+        <tbody>
+            @foreach (var a in searchResults)
+            {
+                <tr>
+                    <td>@a.DisplayName</td>
+                    <td>@a.Email</td>
+                    <td><button class="btn btn-sm btn-outline-primary" @onclick="() => TagAsync(a.Id)">Añadir a TimeOn</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AccountDto>? accounts;
+    private List<AccountDto>? searchResults;
+    private string view = "all";
+    private string search = "";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task SetView(string newView)
+    {
+        view = newView;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        LeadPriority? priority = view == "priorityA" ? LeadPriority.A : null;
+        ContactStatusFilter? contactStatus = view switch
+        {
+            "today" => ContactStatusFilter.ToContactToday,
+            "never" => ContactStatusFilter.NeverContacted,
+            _ => null,
+        };
+
+        accounts = await AccountsApi.GetAllAsync(businessLine: BusinessLine.TimeOn, leadPriority: priority, contactStatus: contactStatus);
+    }
+
+    private async Task SearchAsync()
+    {
+        searchResults = string.IsNullOrWhiteSpace(search) ? null : await AccountsApi.GetAllAsync(search: search);
+    }
+
+    private async Task TagAsync(int accountId)
+    {
+        await AccountsApi.TagBusinessLineAsync(accountId, BusinessLine.TimeOn);
+        searchResults = null;
+        search = "";
+        await LoadAsync();
+    }
+}

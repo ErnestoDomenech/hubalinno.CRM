@@ -3,6 +3,7 @@ using Hubalinno.CRM.Shared.Dtos;
 using Hubalinno.CRM.Web.Controllers;
 using Hubalinno.CRM.Web.Data;
 using Hubalinno.CRM.Web.Data.Entities;
+using Hubalinno.CRM.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +34,7 @@ public class SubscriptionsControllerTests
     {
         await using var db = CreateContext();
         var (account, product) = await SeedAccountAndProductAsync(db);
-        var controller = new SubscriptionsController(db);
+        var controller = new SubscriptionsController(db, new AccountBusinessLineService(db));
 
         var created = await controller.Create(new SubscriptionDto
         {
@@ -55,7 +56,7 @@ public class SubscriptionsControllerTests
     {
         await using var db = CreateContext();
         var (account, product) = await SeedAccountAndProductAsync(db);
-        var controller = new SubscriptionsController(db);
+        var controller = new SubscriptionsController(db, new AccountBusinessLineService(db));
 
         await controller.Create(new SubscriptionDto { AccountId = account.Id, ProductId = product.Id, Status = SubscriptionStatus.Active, StartDate = DateTime.Today });
         await controller.Create(new SubscriptionDto { AccountId = account.Id, ProductId = product.Id, Status = SubscriptionStatus.Cancelled, StartDate = DateTime.Today });

@@ -12,6 +12,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
+    public DbSet<AccountBusinessLine> AccountBusinessLines => Set<AccountBusinessLine>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -61,6 +63,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(o => o.EstimatedValue)
             .HasPrecision(18, 2);
 
+        builder.Entity<Opportunity>()
+            .HasOne(o => o.PipelineStage)
+            .WithMany()
+            .HasForeignKey(o => o.PipelineStageId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Opportunity>()
+            .HasOne(o => o.NextActionActivity)
+            .WithMany()
+            .HasForeignKey(o => o.NextActionActivityId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<Opportunity>()
+            .Property(o => o.NextActionSubject)
+            .HasMaxLength(200);
+
+        builder.Entity<Opportunity>()
+            .HasIndex(o => o.NextActionDueDate);
+
         builder.Entity<Activity>()
             .HasOne(a => a.Account)
             .WithMany()
@@ -74,9 +95,40 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Entity<Activity>()
+            .HasOne(a => a.Contact)
+            .WithMany()
+            .HasForeignKey(a => a.ContactId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<Activity>()
             .HasOne(a => a.AssignedToUser)
             .WithMany()
             .HasForeignKey(a => a.AssignedToUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Activity>()
+            .HasIndex(a => new { a.BusinessLine, a.Status, a.DueDate });
+
+        builder.Entity<PipelineStage>()
+            .HasIndex(p => new { p.BusinessLine, p.Key })
+            .IsUnique();
+
+        builder.Entity<PipelineStage>()
+            .Property(p => p.Key)
+            .HasMaxLength(50);
+
+        builder.Entity<PipelineStage>()
+            .Property(p => p.Name)
+            .HasMaxLength(100);
+
+        builder.Entity<AccountBusinessLine>()
+            .HasOne(l => l.Account)
+            .WithMany()
+            .HasForeignKey(l => l.AccountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<AccountBusinessLine>()
+            .HasIndex(l => new { l.AccountId, l.BusinessLine })
+            .IsUnique();
     }
 }

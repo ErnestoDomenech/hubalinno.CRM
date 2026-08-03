@@ -1,28 +1,25 @@
-@page "/opportunities"
+@page "/timeon/opportunities"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject OpportunitiesApiClient OpportunitiesApi
 @inject AccountsApiClient AccountsApi
 @inject ContactsApiClient ContactsApi
 @inject ProductsApiClient ProductsApi
+@inject ActivitiesApiClient ActivitiesApi
 @inject PipelineStagesApiClient PipelineStagesApi
 @inject UsersApiClient UsersApi
 
-<PageTitle>Oportunidades</PageTitle>
+<PageTitle>Pipeline TimeOn</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Oportunidades</h1>
-    <div>
-        <select class="form-select d-inline-block w-auto me-2" @bind="selectedLine" @bind:after="LoadAsync">
-            <option value="">Todas las líneas (lista)</option>
-            <option value="@BusinessLine.Academy">Academy</option>
-            <option value="@BusinessLine.DecisionLab">DecisionLab</option>
-            <option value="@BusinessLine.TimeOn">TimeOn</option>
-        </select>
-        @if (!creating)
-        {
-            <button class="btn btn-primary" @onclick="StartCreate">Nueva oportunidad</button>
-        }
+    <h1>Pipeline TimeOn</h1>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="onlyMissing" @bind="onlyMissing" @bind:after="LoadAsync" />
+        <label class="form-check-label" for="onlyMissing">Solo incompletas (sin próxima acción)</label>
     </div>
+    @if (!creating)
+    {
+        <button class="btn btn-primary" @onclick="StartCreate">Nueva oportunidad</button>
+    }
 </div>
 
 @if (creating)
@@ -49,30 +46,8 @@
                     }
                 </select>
             </div>
-        </div>
-        <div class="row">
             <div class="col mb-3">
-                <label class="form-label">Producto</label>
-                <select class="form-select" @bind="newOpp.ProductId">
-                    <option value="0">Selecciona un producto</option>
-                    @foreach (var p in products ?? [])
-                    {
-                        <option value="@p.Id">@p.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col mb-3">
-                <label class="form-label">Valor estimado (€)</label>
-                <InputNumber class="form-control" @bind-Value="newOpp.EstimatedValue" />
-            </div>
-            <div class="col mb-3">
-                <label class="form-label">Cierre estimado</label>
-                <InputDate class="form-control" @bind-Value="newOpp.ExpectedCloseDate" />
-            </div>
-        </div>
-        <div class="row">
-            <div class="col mb-3">
-                <label class="form-label">Responsable (opcional)</label>
+                <label class="form-label">Responsable</label>
                 <select class="form-select" @bind="newOpp.OwnerUserId">
                     <option value="">Sin asignar</option>
                     @foreach (var u in users ?? [])
@@ -84,11 +59,21 @@
         </div>
         <div class="row">
             <div class="col mb-3">
-                <label class="form-label">Próxima acción (opcional)</label>
-                <InputText class="form-control" @bind-Value="newOpp.NextActionSubject" placeholder="Asunto" />
+                <label class="form-label">Valor estimado (€)</label>
+                <InputNumber class="form-control" @bind-Value="newOpp.EstimatedValue" />
             </div>
             <div class="col mb-3">
-                <label class="form-label">Fecha de la próxima acción</label>
+                <label class="form-label">Cierre estimado</label>
+                <InputDate class="form-control" @bind-Value="newOpp.ExpectedCloseDate" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Próxima acción (recomendado)</label>
+                <InputText class="form-control" @bind-Value="newOpp.NextActionSubject" placeholder="Ej: Llamar para agendar demo" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Fecha</label>
                 <InputDate class="form-control" @bind-Value="newOpp.NextActionDueDate" />
             </div>
         </div>
@@ -97,59 +82,45 @@
     </EditForm>
 }
 
-@if (opportunities is null)
+@if (opportunities is null || stages is null)
 {
     <p>Cargando...</p>
-}
-else if (string.IsNullOrEmpty(selectedLine))
-{
-    <table class="table table-hover">
-        <thead>
-            <tr>
-                <th>Cuenta</th>
-                <th>Producto</th>
-                <th>Línea</th>
-                <th>Etapa</th>
-                <th>Valor</th>
-                <th>Próxima acción</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var opp in opportunities)
-            {
-                <tr>
-                    <td>@opp.AccountDisplayName</td>
-                    <td>@opp.ProductName</td>
-                    <td>@opp.BusinessLine</td>
-                    <td>@opp.PipelineStageName</td>
-                    <td>@opp.EstimatedValue.ToString("C0")</td>
-                    <td>@NextActionLabel(opp)</td>
-                    <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(opp.Id)">✕</button></td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
-else if (stages is null)
-{
-    <p>Cargando etapas...</p>
 }
 else
 {
     <div class="d-flex gap-2 overflow-auto">
         @foreach (var stage in stages)
         {
-            <div class="border rounded p-2" style="min-width:220px; flex:1;">
+            <div class="border rounded p-2" style="min-width:230px; flex:1;">
                 <h6 class="text-center">@stage.Name</h6>
                 @foreach (var opp in opportunities.Where(o => o.PipelineStageId == stage.Id))
                 {
                     <div class="card mb-2">
                         <div class="card-body p-2">
                             <div class="fw-bold">@opp.AccountDisplayName</div>
-                            <div class="small text-muted">@opp.ProductName</div>
-                            <div class="small">@opp.EstimatedValue.ToString("C0")</div>
-                            <div class="small @(opp.IsNextActionMissing ? "text-danger fw-bold" : "text-muted")">@NextActionLabel(opp)</div>
+                            <div class="small text-muted">@opp.EstimatedValue.ToString("C0")</div>
+                            @if (opp.OwnerName is not null)
+                            {
+                                <div class="small text-muted">@opp.OwnerName</div>
+                            }
+                            <div class="small @(opp.IsNextActionMissing ? "text-danger fw-bold" : "text-muted")">
+                                @(opp.NextActionDueDate.HasValue ? $"{opp.NextActionSubject} · {opp.NextActionDueDate.Value:dd/MM}" : (opp.IsNextActionMissing ? "⚠ Sin próxima acción" : "-"))
+                            </div>
+
+                            @if (followUpTargetId == opp.Id)
+                            {
+                                <div class="mt-2 border-top pt-2">
+                                    <input class="form-control form-control-sm mb-1" @bind="followUpSubject" placeholder="Asunto" />
+                                    <input class="form-control form-control-sm mb-1" type="date" @bind="followUpDate" />
+                                    <button class="btn btn-sm btn-primary" @onclick="() => SaveFollowUpAsync(opp)">Guardar</button>
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => followUpTargetId = null">Cancelar</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-primary mt-1 w-100" @onclick="() => StartFollowUp(opp)">+ Seguimiento</button>
+                            }
+
                             <div class="d-flex justify-content-between mt-1">
                                 <button class="btn btn-sm btn-outline-secondary" disabled="@(stage.SortOrder == stages.Min(s => s.SortOrder))" @onclick="() => MoveAsync(opp, -1)">◀</button>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(opp.Id)">✕</button>
@@ -164,31 +135,42 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "missing")]
+    public int? MissingQuery { get; set; }
+
     private List<OpportunityDto>? opportunities;
     private List<PipelineStageDto>? stages;
     private List<AccountDto>? accounts;
     private List<ContactDto>? accountContacts;
     private List<ProductDto>? products;
     private List<UserSummaryDto>? users;
-    private string selectedLine = "";
     private bool creating;
+    private bool onlyMissing;
     private OpportunityCreateRequest newOpp = new();
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    private int? followUpTargetId;
+    private string followUpSubject = "";
+    private DateTime? followUpDate = DateTime.Today.AddDays(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        onlyMissing = MissingQuery == 1;
+        stages = await PipelineStagesApi.GetAllAsync(BusinessLine.TimeOn);
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
-        BusinessLine? line = string.IsNullOrEmpty(selectedLine) ? null : Enum.Parse<BusinessLine>(selectedLine);
-        opportunities = await OpportunitiesApi.GetAllAsync(line);
-        stages = line.HasValue ? await PipelineStagesApi.GetAllAsync(line) : null;
+        opportunities = await OpportunitiesApi.GetAllAsync(BusinessLine.TimeOn, missingNextAction: onlyMissing ? true : null);
     }
 
     private async Task StartCreate()
     {
-        accounts = await AccountsApi.GetAllAsync();
+        accounts = await AccountsApi.GetAllAsync(businessLine: BusinessLine.TimeOn);
         products = await ProductsApi.GetAllAsync();
         users = await UsersApi.GetAllAsync();
-        newOpp = new OpportunityCreateRequest();
+        var timeOnProduct = products.FirstOrDefault(p => p.BusinessLine == BusinessLine.TimeOn);
+        newOpp = new OpportunityCreateRequest { ProductId = timeOnProduct?.Id ?? 0 };
         creating = true;
     }
 
@@ -231,13 +213,30 @@ else
         await LoadAsync();
     }
 
-    private static string NextActionLabel(OpportunityDto opp)
+    private void StartFollowUp(OpportunityDto opp)
     {
-        if (opp.NextActionDueDate.HasValue)
-        {
-            return $"{opp.NextActionSubject} · {opp.NextActionDueDate.Value:dd/MM/yyyy}";
-        }
+        followUpTargetId = opp.Id;
+        followUpSubject = "";
+        followUpDate = DateTime.Today.AddDays(1);
+    }
 
-        return opp.IsNextActionMissing ? "⚠ Sin próxima acción" : "-";
+    private async Task SaveFollowUpAsync(OpportunityDto opp)
+    {
+        if (string.IsNullOrWhiteSpace(followUpSubject) || !followUpDate.HasValue) return;
+
+        await ActivitiesApi.CreateAsync(new ActivityDto
+        {
+            AccountId = opp.AccountId,
+            ContactId = opp.ContactId,
+            OpportunityId = opp.Id,
+            BusinessLine = BusinessLine.TimeOn,
+            Type = ActivityType.Task,
+            Subject = followUpSubject,
+            DueDate = followUpDate,
+            Status = ActivityStatus.Pending,
+        });
+
+        followUpTargetId = null;
+        await LoadAsync();
     }
 }

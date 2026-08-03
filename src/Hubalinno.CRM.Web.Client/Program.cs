@@ -25,5 +25,6 @@ builder.Services.AddScoped<OpportunitiesApiClient>();
 builder.Services.AddScoped<ActivitiesApiClient>();
 builder.Services.AddScoped<UsersApiClient>();
 builder.Services.AddScoped<DashboardApiClient>();
+builder.Services.AddScoped<PipelineStagesApiClient>();
 
 await builder.Build().RunAsync();

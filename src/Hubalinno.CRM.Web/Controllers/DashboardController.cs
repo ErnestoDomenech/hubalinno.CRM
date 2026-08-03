@@ -41,8 +41,7 @@ public class DashboardController(ApplicationDbContext db, UserManager<Applicatio
 
             var openOpps = db.Opportunities
                 .Where(o => o.Product!.BusinessLine == line
-                    && o.Stage != OpportunityStage.Won
-                    && o.Stage != OpportunityStage.Lost);
+                    && o.PipelineStage != null && !o.PipelineStage.IsWon && !o.PipelineStage.IsLost);
 
             summary.Lines.Add(new BusinessLineSummaryDto
             {
@@ -51,6 +50,7 @@ public class DashboardController(ApplicationDbContext db, UserManager<Applicatio
                 ExpiringSoon = expiringSoon,
                 OpenOpportunities = await openOpps.CountAsync(),
                 OpenOpportunitiesValue = await openOpps.SumAsync(o => o.EstimatedValue),
+                OpenOpportunitiesMissingNextAction = await openOpps.CountAsync(o => o.NextActionDueDate == null),
             });
         }
 

@@ -1,0 +1,93 @@
+@page "/timeon"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject DashboardApiClient DashboardApi
+@inject NavigationManager Nav
+
+<PageTitle>TimeOn Sales OS</PageTitle>
+
+<h1>TimeOn Sales OS</h1>
+
+@if (line is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Suscripciones activas</div>
+                    <div class="fs-2">@line.ActiveSubscriptions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Por vencer (30 días)</div>
+                    <div class="fs-2 @(line.ExpiringSoon > 0 ? "text-danger" : "")">@line.ExpiringSoon</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Oportunidades abiertas</div>
+                    <div class="fs-2">@line.OpenOpportunities</div>
+                    <div class="small text-muted">@line.OpenOpportunitiesValue.ToString("C0") en pipeline</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <div class="text-muted">Sin próxima acción</div>
+                    <div class="fs-2 @(line.OpenOpportunitiesMissingNextAction > 0 ? "text-danger fw-bold" : "")">@line.OpenOpportunitiesMissingNextAction</div>
+                    <button class="btn btn-sm btn-outline-danger" @onclick='() => Nav.NavigateTo("/timeon/opportunities?missing=1")'>Ver incompletas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5>Agenda comercial</h5>
+                    <p class="text-muted">Hoy, vencidas, próximos 7 días y registro rápido de contactos.</p>
+                    <a class="btn btn-primary" href="/timeon/agenda">Abrir agenda</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5>Cuentas TimeOn</h5>
+                    <p class="text-muted">Prospección, prioridades y cuentas sin contactar todavía.</p>
+                    <a class="btn btn-primary" href="/timeon/accounts">Ver cuentas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5>Pipeline TimeOn</h5>
+                    <p class="text-muted">Prospección → contacto → demo → propuesta → cierre.</p>
+                    <a class="btn btn-primary" href="/timeon/opportunities">Ver pipeline</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private BusinessLineSummaryDto? line;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var summary = await DashboardApi.GetSummaryAsync();
+        line = summary?.Lines.FirstOrDefault(l => l.BusinessLine == BusinessLine.TimeOn)
+            ?? new BusinessLineSummaryDto { BusinessLine = BusinessLine.TimeOn };
+    }
+}

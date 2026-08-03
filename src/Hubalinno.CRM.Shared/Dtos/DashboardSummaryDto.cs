@@ -7,6 +7,7 @@ public class BusinessLineSummaryDto
     public int ExpiringSoon { get; set; }
     public int OpenOpportunities { get; set; }
     public decimal OpenOpportunitiesValue { get; set; }
+    public int OpenOpportunitiesMissingNextAction { get; set; }
 }
 
 public class DashboardSummaryDto

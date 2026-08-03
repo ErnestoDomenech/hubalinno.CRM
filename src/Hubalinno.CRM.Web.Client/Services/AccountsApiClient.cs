@@ -6,11 +6,19 @@ namespace Hubalinno.CRM.Web.Client.Services;
 
 public class AccountsApiClient(HttpClient http)
 {
-    public async Task<List<AccountDto>> GetAllAsync(AccountType? type = null, string? search = null)
+    public async Task<List<AccountDto>> GetAllAsync(
+        AccountType? type = null,
+        string? search = null,
+        BusinessLine? businessLine = null,
+        LeadPriority? leadPriority = null,
+        ContactStatusFilter? contactStatus = null)
     {
         var query = new List<string>();
         if (type.HasValue) query.Add($"type={type}");
         if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search)}");
+        if (businessLine.HasValue) query.Add($"businessLine={businessLine}");
+        if (leadPriority.HasValue) query.Add($"leadPriority={leadPriority}");
+        if (contactStatus.HasValue) query.Add($"contactStatus={contactStatus}");
         var url = "api/accounts" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
 
         return await http.GetFromJsonAsync<List<AccountDto>>(url) ?? [];
@@ -35,6 +43,12 @@ public class AccountsApiClient(HttpClient http)
     public async Task DeleteAsync(int id)
     {
         var response = await http.DeleteAsync($"api/accounts/{id}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task TagBusinessLineAsync(int accountId, BusinessLine businessLine)
+    {
+        var response = await http.PostAsync($"api/accounts/{accountId}/business-lines/{businessLine}", null);
         response.EnsureSuccessStatusCode();
     }
 }
