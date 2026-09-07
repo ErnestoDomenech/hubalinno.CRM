@@ -1,0 +1,200 @@
+﻿@page "/investors/new"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject InvestorsApiClient InvestorsApi
+@inject NavigationManager Nav
+
+<PageTitle>Nuevo inversor</PageTitle>
+
+<h1>Nuevo inversor</h1>
+
+<EditForm Model="model" OnValidSubmit="SaveAsync">
+    <DataAnnotationsValidator />
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Nombre del fondo</label>
+            <InputText class="form-control" @bind-Value="model.InvestorName" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Investment stage</label>
+            <InputText class="form-control"
+                       @bind-Value="model.InvestmentStage"
+                       placeholder="Pre-seed, Seed, Series A..." />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Ticket mínimo</label>
+            <InputNumber class="form-control"
+                         @bind-Value="model.TypicalTicketMin" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Ticket máximo</label>
+            <InputNumber class="form-control"
+                         @bind-Value="model.TypicalTicketMax" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Thesis</label>
+        <InputTextArea class="form-control"
+                       rows="3"
+                       @bind-Value="model.Thesis" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Geografía</label>
+        <InputText class="form-control"
+                   @bind-Value="model.Geography"
+                   placeholder="Spain, Europe, Global..." />
+    </div>
+
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Thesis fit</label>
+            <InputNumber class="form-control"
+                         min="0"
+                         max="5"
+                         @bind-Value="model.ThesisFit" />
+            <div class="form-text">0–5</div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <label class="form-label">Access score</label>
+            <InputNumber class="form-control"
+                         min="0"
+                         max="5"
+                         @bind-Value="model.AccessScore" />
+            <div class="form-text">0–5</div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Relationship temperature</label>
+
+            <InputSelect class="form-select"
+                         @bind-Value="model.RelationshipTemperature">
+                <option value="@RelationshipTemperature.Cold">Cold</option>
+                <option value="@RelationshipTemperature.Warm">Warm</option>
+                <option value="@RelationshipTemperature.Active">Active</option>
+            </InputSelect>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Portfolio conflict</label>
+        <InputTextArea class="form-control"
+                       rows="2"
+                       @bind-Value="model.PortfolioConflict" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Warm intro route</label>
+        <InputTextArea class="form-control"
+                       rows="2"
+                       @bind-Value="model.WarmIntroRoute" />
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Última interacción</label>
+            <InputDate class="form-control"
+                       @bind-Value="model.LastInteraction" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Fecha próxima acción</label>
+            <InputDate class="form-control"
+                       @bind-Value="model.NextActionDate" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Próxima acción</label>
+        <InputText class="form-control"
+                   @bind-Value="model.NextAction" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    <div class="d-flex gap-2">
+        <button type="submit"
+                class="btn btn-primary"
+                disabled="@saving">
+            @(saving ? "Guardando..." : "Guardar inversor")
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                @onclick="Cancel">
+            Cancelar
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    private InvestorDto model = new()
+    {
+        RelationshipTemperature = RelationshipTemperature.Cold
+    };
+
+    private bool saving;
+    private string? errorMessage;
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(model.InvestorName))
+        {
+            errorMessage = "El nombre del fondo es obligatorio.";
+            return;
+        }
+
+        if (model.ThesisFit < 0 || model.ThesisFit > 5)
+        {
+            errorMessage = "Thesis Fit debe estar entre 0 y 5.";
+            return;
+        }
+
+        if (model.AccessScore < 0 || model.AccessScore > 5)
+        {
+            errorMessage = "Access Score debe estar entre 0 y 5.";
+            return;
+        }
+
+        saving = true;
+        errorMessage = null;
+
+        try
+        {
+            var created = await InvestorsApi.CreateAsync(model);
+
+            if (created is null)
+            {
+                errorMessage = "No se pudo crear el inversor.";
+                return;
+            }
+
+            Nav.NavigateTo("/investors");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar el inversor: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo("/investors");
+    }
+}

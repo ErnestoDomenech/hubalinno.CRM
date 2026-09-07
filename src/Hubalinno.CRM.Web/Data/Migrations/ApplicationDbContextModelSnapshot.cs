@@ -118,13 +118,40 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrentTimeTrackingSystem")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("DoNotContact")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("EmployeeCountMax")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EmployeeCountMin")
+                        .HasColumnType("int");
 
                     b.Property<string>("FirstName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("IcpScore")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Industry")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("LastName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("LeadPriority")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LeadSource")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LinkedInUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Notes")
@@ -133,7 +160,13 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<string>("OwnerUserId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PainHypothesis")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Province")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TaxId")
@@ -142,9 +175,40 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Website")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.AccountBusinessLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("BusinessLine")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastContactedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId", "BusinessLine")
+                        .IsUnique();
+
+                    b.ToTable("AccountBusinessLines");
                 });
 
             modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.Activity", b =>
@@ -161,8 +225,14 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<string>("AssignedToUserId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("BusinessLine")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("ContactId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
@@ -189,7 +259,11 @@ namespace Hubalinno.CRM.Web.Migrations
 
                     b.HasIndex("AssignedToUserId");
 
+                    b.HasIndex("ContactId");
+
                     b.HasIndex("OpportunityId");
+
+                    b.HasIndex("BusinessLine", "Status", "DueDate");
 
                     b.ToTable("Activities");
                 });
@@ -205,6 +279,9 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<int>("AccountId")
                         .HasColumnType("int");
 
+                    b.Property<int>("DecisionRole")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
@@ -212,21 +289,93 @@ namespace Hubalinno.CRM.Web.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
                     b.Property<string>("JobTitle")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastContactAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("LinkedInUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PreferredChannel")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId");
 
                     b.ToTable("Contacts");
+                });
+
+            modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.InvestorProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccessScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Geography")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InvestmentStage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastInteraction")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NextAction")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("NextActionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PortfolioConflict")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RelationshipTemperature")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Thesis")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ThesisFit")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TypicalTicketMax")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TypicalTicketMin")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("WarmIntroRoute")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .IsUnique();
+
+                    b.ToTable("InvestorProfiles");
                 });
 
             modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.Opportunity", b =>
@@ -253,10 +402,26 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.Property<DateTime?>("ExpectedCloseDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("NextActionActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextActionDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NextActionSubject")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OpportunityType")
+                        .HasColumnType("int");
+
                     b.Property<string>("OwnerUserId")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("PipelineStageId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int>("Stage")
@@ -268,9 +433,53 @@ namespace Hubalinno.CRM.Web.Migrations
 
                     b.HasIndex("ContactId");
 
+                    b.HasIndex("NextActionActivityId");
+
+                    b.HasIndex("NextActionDueDate");
+
+                    b.HasIndex("PipelineStageId");
+
                     b.HasIndex("ProductId");
 
                     b.ToTable("Opportunities");
+                });
+
+            modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.PipelineStage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BusinessLine")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsLost")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsWon")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessLine", "Key")
+                        .IsUnique();
+
+                    b.ToTable("PipelineStages");
                 });
 
             modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.Product", b =>
@@ -494,6 +703,17 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.AccountBusinessLine", b =>
+                {
+                    b.HasOne("Hubalinno.CRM.Web.Data.Entities.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.Activity", b =>
                 {
                     b.HasOne("Hubalinno.CRM.Web.Data.Entities.Account", "Account")
@@ -506,6 +726,11 @@ namespace Hubalinno.CRM.Web.Migrations
                         .HasForeignKey("AssignedToUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Hubalinno.CRM.Web.Data.Entities.Contact", "Contact")
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Hubalinno.CRM.Web.Data.Entities.Opportunity", "Opportunity")
                         .WithMany()
                         .HasForeignKey("OpportunityId")
@@ -515,6 +740,8 @@ namespace Hubalinno.CRM.Web.Migrations
 
                     b.Navigation("AssignedToUser");
 
+                    b.Navigation("Contact");
+
                     b.Navigation("Opportunity");
                 });
 
@@ -523,6 +750,17 @@ namespace Hubalinno.CRM.Web.Migrations
                     b.HasOne("Hubalinno.CRM.Web.Data.Entities.Account", "Account")
                         .WithMany("Contacts")
                         .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.InvestorProfile", b =>
+                {
+                    b.HasOne("Hubalinno.CRM.Web.Data.Entities.Account", "Account")
+                        .WithOne("InvestorProfile")
+                        .HasForeignKey("Hubalinno.CRM.Web.Data.Entities.InvestorProfile", "AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -542,15 +780,28 @@ namespace Hubalinno.CRM.Web.Migrations
                         .HasForeignKey("ContactId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Hubalinno.CRM.Web.Data.Entities.Activity", "NextActionActivity")
+                        .WithMany()
+                        .HasForeignKey("NextActionActivityId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Hubalinno.CRM.Web.Data.Entities.PipelineStage", "PipelineStage")
+                        .WithMany()
+                        .HasForeignKey("PipelineStageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Hubalinno.CRM.Web.Data.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Account");
 
                     b.Navigation("Contact");
+
+                    b.Navigation("NextActionActivity");
+
+                    b.Navigation("PipelineStage");
 
                     b.Navigation("Product");
                 });
@@ -679,6 +930,8 @@ namespace Hubalinno.CRM.Web.Migrations
             modelBuilder.Entity("Hubalinno.CRM.Web.Data.Entities.Account", b =>
                 {
                     b.Navigation("Contacts");
+
+                    b.Navigation("InvestorProfile");
                 });
 #pragma warning restore 612, 618
         }

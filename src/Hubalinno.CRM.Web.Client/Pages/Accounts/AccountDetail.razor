@@ -44,6 +44,32 @@ else
             <dt class="col-sm-2">Notas</dt>
             <dd class="col-sm-10">@account.Notes</dd>
         </dl>
+
+        <h3 class="mt-4">Prospección</h3>
+        <dl class="row">
+            <dt class="col-sm-2">Website</dt>
+            <dd class="col-sm-4">@account.Website</dd>
+            <dt class="col-sm-2">LinkedIn</dt>
+            <dd class="col-sm-4">@account.LinkedInUrl</dd>
+            <dt class="col-sm-2">Sector</dt>
+            <dd class="col-sm-4">@account.Industry</dd>
+            <dt class="col-sm-2">Provincia</dt>
+            <dd class="col-sm-4">@account.Province</dd>
+            <dt class="col-sm-2">Empleados</dt>
+            <dd class="col-sm-4">@account.EmployeeCountMin - @account.EmployeeCountMax</dd>
+            <dt class="col-sm-2">Prioridad</dt>
+            <dd class="col-sm-4">@account.LeadPriority</dd>
+            <dt class="col-sm-2">Origen</dt>
+            <dd class="col-sm-4">@account.LeadSource</dd>
+            <dt class="col-sm-2">Sistema actual</dt>
+            <dd class="col-sm-4">@account.CurrentTimeTrackingSystem</dd>
+            <dt class="col-sm-2">Hipótesis de dolor</dt>
+            <dd class="col-sm-4">@account.PainHypothesis</dd>
+            <dt class="col-sm-2">ICP score</dt>
+            <dd class="col-sm-4">@account.IcpScore</dd>
+            <dt class="col-sm-2">No contactar</dt>
+            <dd class="col-sm-4">@(account.DoNotContact ? "Sí" : "No")</dd>
+        </dl>
     }
     else
     {
@@ -107,6 +133,78 @@ else
                 <label class="form-label">Notas</label>
                 <InputTextArea class="form-control" @bind-Value="editModel.Notes" />
             </div>
+
+            <h5 class="mt-4">Prospección</h5>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Website</label>
+                    <InputText class="form-control" @bind-Value="editModel.Website" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">LinkedIn</label>
+                    <InputText class="form-control" @bind-Value="editModel.LinkedInUrl" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Sector</label>
+                    <InputText class="form-control" @bind-Value="editModel.Industry" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">Provincia</label>
+                    <InputText class="form-control" @bind-Value="editModel.Province" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Empleados (mín.)</label>
+                    <InputNumber class="form-control" @bind-Value="editModel.EmployeeCountMin" />
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">Empleados (máx.)</label>
+                    <InputNumber class="form-control" @bind-Value="editModel.EmployeeCountMax" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">Prioridad</label>
+                    <select class="form-select" @bind="editModel.LeadPriority">
+                        <option value="">Sin definir</option>
+                        <option value="@LeadPriority.A">A</option>
+                        <option value="@LeadPriority.B">B</option>
+                        <option value="@LeadPriority.C">C</option>
+                    </select>
+                </div>
+                <div class="col mb-3">
+                    <label class="form-label">Origen</label>
+                    <select class="form-select" @bind="editModel.LeadSource">
+                        <option value="">Sin definir</option>
+                        @foreach (var s in Enum.GetValues<LeadSource>())
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Sistema de fichaje actual</label>
+                <InputText class="form-control" @bind-Value="editModel.CurrentTimeTrackingSystem" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Hipótesis de dolor</label>
+                <InputTextArea class="form-control" @bind-Value="editModel.PainHypothesis" />
+            </div>
+            <div class="row">
+                <div class="col mb-3">
+                    <label class="form-label">ICP score (0-100)</label>
+                    <InputNumber class="form-control" @bind-Value="editModel.IcpScore" />
+                </div>
+                <div class="col mb-3 form-check mt-4">
+                    <InputCheckbox class="form-check-input" @bind-Value="editModel.DoNotContact" id="doNotContact" />
+                    <label class="form-check-label" for="doNotContact">No contactar</label>
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary">Guardar</button>
             <button type="button" class="btn btn-secondary" @onclick="() => editing = false">Cancelar</button>
         </EditForm>
@@ -373,6 +471,18 @@ else
             City = account.City,
             Country = account.Country,
             Notes = account.Notes,
+            Website = account.Website,
+            LinkedInUrl = account.LinkedInUrl,
+            Industry = account.Industry,
+            EmployeeCountMin = account.EmployeeCountMin,
+            EmployeeCountMax = account.EmployeeCountMax,
+            Province = account.Province,
+            LeadPriority = account.LeadPriority,
+            LeadSource = account.LeadSource,
+            CurrentTimeTrackingSystem = account.CurrentTimeTrackingSystem,
+            PainHypothesis = account.PainHypothesis,
+            IcpScore = account.IcpScore,
+            DoNotContact = account.DoNotContact,
         };
         editing = true;
     }
@@ -478,6 +588,8 @@ else
         ActivityType.Meeting => "Reunión",
         ActivityType.Task => "Tarea",
         ActivityType.Note => "Nota",
+        ActivityType.LinkedIn => "LinkedIn",
+        ActivityType.Conversation => "Conversación",
         _ => t.ToString(),
     };
 }

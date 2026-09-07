@@ -79,6 +79,11 @@ public class ContactsController(ApplicationDbContext db) : ControllerBase
         contact.Email = dto.Email;
         contact.Phone = dto.Phone;
         contact.JobTitle = dto.JobTitle;
+        contact.LinkedInUrl = dto.LinkedInUrl;
+        contact.IsPrimary = dto.IsPrimary;
+        contact.DecisionRole = dto.DecisionRole;
+        contact.PreferredChannel = dto.PreferredChannel;
+        // LastContactAt es un cache derivado (ActivityRollupService) y no se acepta del cliente.
     }
 
     private static ContactDto ToDto(Contact c) => new()
@@ -90,5 +95,10 @@ public class ContactsController(ApplicationDbContext db) : ControllerBase
         Email = c.Email,
         Phone = c.Phone,
         JobTitle = c.JobTitle,
+        LinkedInUrl = c.LinkedInUrl,
+        IsPrimary = c.IsPrimary,
+        DecisionRole = c.DecisionRole,
+        PreferredChannel = c.PreferredChannel,
+        LastContactAt = c.LastContactAt,
     };
 }

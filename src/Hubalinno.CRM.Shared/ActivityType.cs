@@ -7,4 +7,6 @@ public enum ActivityType
     Meeting = 2,
     Task = 3,
     Note = 4,
+    LinkedIn = 5,
+    Conversation = 6,
 }

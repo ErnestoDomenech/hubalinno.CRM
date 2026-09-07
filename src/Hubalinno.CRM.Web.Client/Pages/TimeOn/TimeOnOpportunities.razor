@@ -1,0 +1,242 @@
+@page "/timeon/opportunities"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject OpportunitiesApiClient OpportunitiesApi
+@inject AccountsApiClient AccountsApi
+@inject ContactsApiClient ContactsApi
+@inject ProductsApiClient ProductsApi
+@inject ActivitiesApiClient ActivitiesApi
+@inject PipelineStagesApiClient PipelineStagesApi
+@inject UsersApiClient UsersApi
+
+<PageTitle>Pipeline TimeOn</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Pipeline TimeOn</h1>
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="onlyMissing" @bind="onlyMissing" @bind:after="LoadAsync" />
+        <label class="form-check-label" for="onlyMissing">Solo incompletas (sin próxima acción)</label>
+    </div>
+    @if (!creating)
+    {
+        <button class="btn btn-primary" @onclick="StartCreate">Nueva oportunidad</button>
+    }
+</div>
+
+@if (creating)
+{
+    <EditForm Model="newOpp" OnValidSubmit="SaveAsync" class="col-lg-8 border rounded p-3 mb-4">
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Cuenta</label>
+                <select class="form-select" @bind="newOpp.AccountId" @bind:after="OnAccountChangedAsync">
+                    <option value="0">Selecciona una cuenta</option>
+                    @foreach (var a in accounts ?? [])
+                    {
+                        <option value="@a.Id">@a.DisplayName</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Contacto (opcional)</label>
+                <select class="form-select" @bind="newOpp.ContactId">
+                    <option value="">Ninguno</option>
+                    @foreach (var c in accountContacts ?? [])
+                    {
+                        <option value="@c.Id">@c.FirstName @c.LastName</option>
+                    }
+                </select>
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Responsable</label>
+                <select class="form-select" @bind="newOpp.OwnerUserId">
+                    <option value="">Sin asignar</option>
+                    @foreach (var u in users ?? [])
+                    {
+                        <option value="@u.Id">@u.FullName</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Valor estimado (€)</label>
+                <InputNumber class="form-control" @bind-Value="newOpp.EstimatedValue" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Cierre estimado</label>
+                <InputDate class="form-control" @bind-Value="newOpp.ExpectedCloseDate" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col mb-3">
+                <label class="form-label">Próxima acción (recomendado)</label>
+                <InputText class="form-control" @bind-Value="newOpp.NextActionSubject" placeholder="Ej: Llamar para agendar demo" />
+            </div>
+            <div class="col mb-3">
+                <label class="form-label">Fecha</label>
+                <InputDate class="form-control" @bind-Value="newOpp.NextActionDueDate" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" class="btn btn-secondary" @onclick="() => creating = false">Cancelar</button>
+    </EditForm>
+}
+
+@if (opportunities is null || stages is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="d-flex gap-2 overflow-auto">
+        @foreach (var stage in stages)
+        {
+            <div class="border rounded p-2" style="min-width:230px; flex:1;">
+                <h6 class="text-center">@stage.Name</h6>
+                @foreach (var opp in opportunities.Where(o => o.PipelineStageId == stage.Id))
+                {
+                    <div class="card mb-2">
+                        <div class="card-body p-2">
+                            <div class="fw-bold">@opp.AccountDisplayName</div>
+                            <div class="small text-muted">@opp.EstimatedValue.ToString("C0")</div>
+                            @if (opp.OwnerName is not null)
+                            {
+                                <div class="small text-muted">@opp.OwnerName</div>
+                            }
+                            <div class="small @(opp.IsNextActionMissing ? "text-danger fw-bold" : "text-muted")">
+                                @(opp.NextActionDueDate.HasValue ? $"{opp.NextActionSubject} · {opp.NextActionDueDate.Value:dd/MM}" : (opp.IsNextActionMissing ? "⚠ Sin próxima acción" : "-"))
+                            </div>
+
+                            @if (followUpTargetId == opp.Id)
+                            {
+                                <div class="mt-2 border-top pt-2">
+                                    <input class="form-control form-control-sm mb-1" @bind="followUpSubject" placeholder="Asunto" />
+                                    <input class="form-control form-control-sm mb-1" type="date" @bind="followUpDate" />
+                                    <button class="btn btn-sm btn-primary" @onclick="() => SaveFollowUpAsync(opp)">Guardar</button>
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => followUpTargetId = null">Cancelar</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-primary mt-1 w-100" @onclick="() => StartFollowUp(opp)">+ Seguimiento</button>
+                            }
+
+                            <div class="d-flex justify-content-between mt-1">
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@(stage.SortOrder == stages.Min(s => s.SortOrder))" @onclick="() => MoveAsync(opp, -1)">◀</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(opp.Id)">✕</button>
+                                <button class="btn btn-sm btn-outline-secondary" disabled="@(stage.SortOrder == stages.Max(s => s.SortOrder))" @onclick="() => MoveAsync(opp, 1)">▶</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "missing")]
+    public int? MissingQuery { get; set; }
+
+    private List<OpportunityDto>? opportunities;
+    private List<PipelineStageDto>? stages;
+    private List<AccountDto>? accounts;
+    private List<ContactDto>? accountContacts;
+    private List<ProductDto>? products;
+    private List<UserSummaryDto>? users;
+    private bool creating;
+    private bool onlyMissing;
+    private OpportunityCreateRequest newOpp = new();
+
+    private int? followUpTargetId;
+    private string followUpSubject = "";
+    private DateTime? followUpDate = DateTime.Today.AddDays(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        onlyMissing = MissingQuery == 1;
+        stages = await PipelineStagesApi.GetAllAsync(BusinessLine.TimeOn);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        opportunities = await OpportunitiesApi.GetAllAsync(BusinessLine.TimeOn, missingNextAction: onlyMissing ? true : null);
+    }
+
+    private async Task StartCreate()
+    {
+        accounts = await AccountsApi.GetAllAsync(businessLine: BusinessLine.TimeOn);
+        products = await ProductsApi.GetAllAsync();
+        users = await UsersApi.GetAllAsync();
+        var timeOnProduct = products.FirstOrDefault(p => p.BusinessLine == BusinessLine.TimeOn);
+        newOpp = new OpportunityCreateRequest { ProductId = timeOnProduct?.Id ?? 0 };
+        creating = true;
+    }
+
+    private async Task OnAccountChangedAsync()
+    {
+        accountContacts = newOpp.AccountId > 0 ? await ContactsApi.GetByAccountAsync(newOpp.AccountId) : [];
+    }
+
+    private async Task SaveAsync()
+    {
+        if (newOpp.AccountId == 0 || newOpp.ProductId == 0) return;
+
+        await OpportunitiesApi.CreateAsync(newOpp);
+        creating = false;
+        await LoadAsync();
+    }
+
+    private async Task MoveAsync(OpportunityDto opp, int direction)
+    {
+        if (stages is null) return;
+
+        var currentIndex = stages.FindIndex(s => s.Id == opp.PipelineStageId);
+        var newIndex = currentIndex + direction;
+        if (newIndex < 0 || newIndex >= stages.Count) return;
+
+        await OpportunitiesApi.UpdateAsync(opp.Id, new OpportunityUpdateRequest
+        {
+            ContactId = opp.ContactId,
+            PipelineStageId = stages[newIndex].Id,
+            EstimatedValue = opp.EstimatedValue,
+            ExpectedCloseDate = opp.ExpectedCloseDate,
+            OwnerUserId = opp.OwnerUserId,
+        });
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await OpportunitiesApi.DeleteAsync(id);
+        await LoadAsync();
+    }
+
+    private void StartFollowUp(OpportunityDto opp)
+    {
+        followUpTargetId = opp.Id;
+        followUpSubject = "";
+        followUpDate = DateTime.Today.AddDays(1);
+    }
+
+    private async Task SaveFollowUpAsync(OpportunityDto opp)
+    {
+        if (string.IsNullOrWhiteSpace(followUpSubject) || !followUpDate.HasValue) return;
+
+        await ActivitiesApi.CreateAsync(new ActivityDto
+        {
+            AccountId = opp.AccountId,
+            ContactId = opp.ContactId,
+            OpportunityId = opp.Id,
+            BusinessLine = BusinessLine.TimeOn,
+            Type = ActivityType.Task,
+            Subject = followUpSubject,
+            DueDate = followUpDate,
+            Status = ActivityStatus.Pending,
+        });
+
+        followUpTargetId = null;
+        await LoadAsync();
+    }
+}

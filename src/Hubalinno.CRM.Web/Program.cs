@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Hubalinno.CRM.Web.Components;
 using Hubalinno.CRM.Web.Components.Account;
 using Hubalinno.CRM.Web.Data;
+using Hubalinno.CRM.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+builder.Services.AddScoped<ActivityRollupService>();
+builder.Services.AddScoped<AccountBusinessLineService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,205 @@
+﻿@page "/investors"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject InvestorsApiClient InvestorsApi
+
+<PageTitle>Investors</PageTitle>
+
+<div class="mb-4">
+    <h1 class="hub-page-title mb-1">Investor CRM</h1>
+    <div class="hub-subtitle">
+        Fundraising pipeline and investor relationship management
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-3">
+    <a class="btn hub-btn-primary" href="/investors/new">
+        New investor
+    </a>
+</div>
+
+@if (investors is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 hub-card">
+                <div class="card-body">
+                    <div class="hub-metric-label">Targets</div>
+                    <div class="hub-metric-value">@investors.Count</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 hub-card">
+                <div class="card-body">
+                    <div class="hub-metric-label">Relaciones activas</div>
+                    <div class="hub-metric-value">@ActiveRelationships</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 hub-card">
+                <div class="card-body">
+                    <div class="hub-metric-label">Warm</div>
+                    <div class="hub-metric-value">@WarmRelationships</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 hub-card">
+                <div class="card-body">
+                    <div class="hub-metric-label">Próximas acciones</div>
+                    <div class="hub-metric-value">@PendingNextActions</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (investors.Count == 0)
+    {
+        <div class="alert alert-secondary">
+            Todavía no hay inversores registrados.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle hub-table">
+                <thead>
+                    <tr>
+                        <th>Investor</th>
+                        <th>Partner</th>
+                        <th>Stage</th>
+                        <th>Fit</th>
+                        <th>Access</th>
+                        <th>Temperature</th>
+                        <th>Last interaction</th>
+                        <th>Next action</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var investor in investors)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@investor.InvestorName</strong>
+                            </td>
+
+                            <td>
+                                @(investor.PrimaryContactName ?? "—")
+                            </td>
+
+                            <td>
+                                @(investor.InvestmentStage ?? "—")
+                            </td>
+
+                            <td>
+                                <span class="hub-score">
+                                    @ScoreLabel(investor.ThesisFit)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="hub-score">
+                                    @ScoreLabel(investor.AccessScore)
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="@TemperatureCss(investor.RelationshipTemperature)">
+                                    @TemperatureLabel(investor.RelationshipTemperature)
+                                </span>
+                            </td>
+
+                            <td>
+                                @(investor.LastInteraction?.ToString("dd/MM/yyyy") ?? "—")
+                            </td>
+
+                            <td>
+                                <span class="hub-next-action">
+                                    @(investor.NextAction ?? "—")
+                                </span>
+                            </td>
+
+                            <td>
+                                @(investor.NextActionDate?.ToString("dd/MM/yyyy") ?? "—")
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => DeleteAsync(investor.AccountId)">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<InvestorDto>? investors;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private int ActiveRelationships =>
+        investors?.Count(i =>
+            i.RelationshipTemperature == RelationshipTemperature.Active) ?? 0;
+
+    private int WarmRelationships =>
+        investors?.Count(i =>
+            i.RelationshipTemperature == RelationshipTemperature.Warm) ?? 0;
+
+    private int PendingNextActions =>
+        investors?.Count(i =>
+            i.NextActionDate.HasValue) ?? 0;
+
+    private static string ScoreLabel(int score)
+        => score > 0 ? $"{score}/5" : "—";
+
+    private static string TemperatureLabel(RelationshipTemperature temperature)
+        => temperature switch
+        {
+            RelationshipTemperature.Cold => "Cold",
+            RelationshipTemperature.Warm => "Warm",
+            RelationshipTemperature.Active => "Active",
+            _ => temperature.ToString()
+        };
+
+    private async Task DeleteAsync(int accountId)
+    {
+        await InvestorsApi.DeleteAsync(accountId);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        investors = await InvestorsApi.GetAllAsync();
+    }
+
+    private static string TemperatureCss(RelationshipTemperature temperature)
+    => temperature switch
+    {
+        RelationshipTemperature.Cold =>
+            "badge rounded-pill hub-badge-cold",
+
+        RelationshipTemperature.Warm =>
+            "badge rounded-pill hub-badge-warm",
+
+        RelationshipTemperature.Active =>
+            "badge rounded-pill hub-badge-active",
+
+        _ =>
+            "badge rounded-pill text-bg-secondary"
+    };
+}

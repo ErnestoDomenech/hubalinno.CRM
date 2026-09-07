@@ -2,6 +2,7 @@ using Hubalinno.CRM.Shared;
 using Hubalinno.CRM.Shared.Dtos;
 using Hubalinno.CRM.Web.Data;
 using Hubalinno.CRM.Web.Data.Entities;
+using Hubalinno.CRM.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,10 +12,15 @@ namespace Hubalinno.CRM.Web.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/accounts")]
-public class AccountsController(ApplicationDbContext db) : ControllerBase
+public class AccountsController(ApplicationDbContext db, AccountBusinessLineService businessLineService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<AccountDto>>> GetAll([FromQuery] AccountType? type, [FromQuery] string? search)
+    public async Task<ActionResult<List<AccountDto>>> GetAll(
+        [FromQuery] AccountType? type,
+        [FromQuery] string? search,
+        [FromQuery] BusinessLine? businessLine,
+        [FromQuery] LeadPriority? leadPriority,
+        [FromQuery] ContactStatusFilter? contactStatus)
     {
         var query = db.Accounts.AsQueryable();
 
@@ -31,6 +37,34 @@ public class AccountsController(ApplicationDbContext db) : ControllerBase
                 (a.FirstName != null && a.FirstName.Contains(term)) ||
                 (a.LastName != null && a.LastName.Contains(term)) ||
                 (a.Email != null && a.Email.Contains(term)));
+        }
+
+        if (businessLine.HasValue)
+        {
+            query = query.Where(a => db.AccountBusinessLines.Any(l => l.AccountId == a.Id && l.BusinessLine == businessLine.Value));
+        }
+
+        if (leadPriority.HasValue)
+        {
+            query = query.Where(a => a.LeadPriority == leadPriority.Value);
+        }
+
+        if (contactStatus == ContactStatusFilter.ToContactToday)
+        {
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+            query = query.Where(a => db.Activities.Any(act =>
+                act.AccountId == a.Id
+                && act.Status == ActivityStatus.Pending
+                && act.DueDate >= today && act.DueDate < tomorrow
+                && (!businessLine.HasValue || act.BusinessLine == businessLine.Value)));
+        }
+        else if (contactStatus == ContactStatusFilter.NeverContacted)
+        {
+            query = query.Where(a => db.AccountBusinessLines.Any(l =>
+                l.AccountId == a.Id
+                && (!businessLine.HasValue || l.BusinessLine == businessLine.Value)
+                && l.LastContactedAt == null));
         }
 
         var accounts = await query.OrderBy(a => a.CompanyName).ThenBy(a => a.LastName).ToListAsync();
@@ -96,6 +130,19 @@ public class AccountsController(ApplicationDbContext db) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id:int}/business-lines/{businessLine}")]
+    public async Task<IActionResult> TagBusinessLine(int id, BusinessLine businessLine)
+    {
+        var account = await db.Accounts.FindAsync(id);
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        await businessLineService.EnsureTaggedAsync(id, businessLine);
+        return NoContent();
+    }
+
     private static void ApplyDto(Account account, AccountDto dto)
     {
         account.AccountType = dto.AccountType;
@@ -109,6 +156,18 @@ public class AccountsController(ApplicationDbContext db) : ControllerBase
         account.City = dto.City;
         account.Country = dto.Country;
         account.Notes = dto.Notes;
+        account.Website = dto.Website;
+        account.LinkedInUrl = dto.LinkedInUrl;
+        account.Industry = dto.Industry;
+        account.EmployeeCountMin = dto.EmployeeCountMin;
+        account.EmployeeCountMax = dto.EmployeeCountMax;
+        account.Province = dto.Province;
+        account.LeadPriority = dto.LeadPriority;
+        account.LeadSource = dto.LeadSource;
+        account.CurrentTimeTrackingSystem = dto.CurrentTimeTrackingSystem;
+        account.PainHypothesis = dto.PainHypothesis;
+        account.IcpScore = dto.IcpScore;
+        account.DoNotContact = dto.DoNotContact;
     }
 
     private static AccountDto ToDto(Account a) => new()
@@ -127,5 +186,17 @@ public class AccountsController(ApplicationDbContext db) : ControllerBase
         Notes = a.Notes,
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt,
+        Website = a.Website,
+        LinkedInUrl = a.LinkedInUrl,
+        Industry = a.Industry,
+        EmployeeCountMin = a.EmployeeCountMin,
+        EmployeeCountMax = a.EmployeeCountMax,
+        Province = a.Province,
+        LeadPriority = a.LeadPriority,
+        LeadSource = a.LeadSource,
+        CurrentTimeTrackingSystem = a.CurrentTimeTrackingSystem,
+        PainHypothesis = a.PainHypothesis,
+        IcpScore = a.IcpScore,
+        DoNotContact = a.DoNotContact,
     };
 }

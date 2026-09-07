@@ -6,7 +6,7 @@ public class SubscriptionDto
     public int AccountId { get; set; }
     public string AccountDisplayName { get; set; } = "";
     public int ProductId { get; set; }
-    public string ProductName { get; set; } = "";
+    public string ProductName { get; set; } = string.Empty;
     public BusinessLine BusinessLine { get; set; }
     public SubscriptionStatus Status { get; set; }
     public DateTime StartDate { get; set; }

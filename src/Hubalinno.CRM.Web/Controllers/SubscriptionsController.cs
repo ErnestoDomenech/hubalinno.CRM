@@ -2,6 +2,7 @@ using Hubalinno.CRM.Shared;
 using Hubalinno.CRM.Shared.Dtos;
 using Hubalinno.CRM.Web.Data;
 using Hubalinno.CRM.Web.Data.Entities;
+using Hubalinno.CRM.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ namespace Hubalinno.CRM.Web.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/subscriptions")]
-public class SubscriptionsController(ApplicationDbContext db) : ControllerBase
+public class SubscriptionsController(ApplicationDbContext db, AccountBusinessLineService businessLineService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<SubscriptionDto>>> GetAll(
@@ -57,6 +58,8 @@ public class SubscriptionsController(ApplicationDbContext db) : ControllerBase
 
         await db.Entry(subscription).Reference(s => s.Account).LoadAsync();
         await db.Entry(subscription).Reference(s => s.Product).LoadAsync();
+
+        await businessLineService.EnsureTaggedAsync(subscription.AccountId, subscription.Product!.BusinessLine);
 
         return Ok(ToDto(subscription));
     }
@@ -111,7 +114,7 @@ public class SubscriptionsController(ApplicationDbContext db) : ControllerBase
             ? s.Account.CompanyName ?? ""
             : $"{s.Account.FirstName} {s.Account.LastName}".Trim(),
         ProductId = s.ProductId,
-        ProductName = s.Product!.Name,
+        ProductName = s.Product?.Name,
         BusinessLine = s.Product.BusinessLine,
         Status = s.Status,
         StartDate = s.StartDate,
