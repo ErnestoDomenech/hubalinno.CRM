@@ -35,4 +35,5 @@ public class Account
     public bool DoNotContact { get; set; }
 
     public List<Contact> Contacts { get; set; } = [];
+    public InvestorProfile? InvestorProfile { get; set; }
 }

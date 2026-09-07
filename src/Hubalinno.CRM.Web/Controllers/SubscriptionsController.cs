@@ -114,7 +114,7 @@ public class SubscriptionsController(ApplicationDbContext db, AccountBusinessLin
             ? s.Account.CompanyName ?? ""
             : $"{s.Account.FirstName} {s.Account.LastName}".Trim(),
         ProductId = s.ProductId,
-        ProductName = s.Product!.Name,
+        ProductName = s.Product?.Name,
         BusinessLine = s.Product.BusinessLine,
         Status = s.Status,
         StartDate = s.StartDate,

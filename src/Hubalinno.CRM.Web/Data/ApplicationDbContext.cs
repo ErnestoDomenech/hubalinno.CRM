@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<PipelineStage> PipelineStages => Set<PipelineStage>();
     public DbSet<AccountBusinessLine> AccountBusinessLines => Set<AccountBusinessLine>();
+    public DbSet<InvestorProfile> InvestorProfiles => Set<InvestorProfile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -24,6 +25,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithOne(c => c.Account)
             .HasForeignKey(c => c.AccountId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Account>()
+            .HasOne(a => a.InvestorProfile)
+            .WithOne(i => i.Account)
+            .HasForeignKey<InvestorProfile>(i => i.AccountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<InvestorProfile>()
+            .Property(i => i.TypicalTicketMin)
+            .HasPrecision(18, 2);
+
+        builder.Entity<InvestorProfile>()
+            .Property(i => i.TypicalTicketMax)
+            .HasPrecision(18, 2);
 
         builder.Entity<Product>()
             .HasIndex(p => p.Key)

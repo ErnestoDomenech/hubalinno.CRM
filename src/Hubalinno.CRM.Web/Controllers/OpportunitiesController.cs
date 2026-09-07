@@ -198,7 +198,7 @@ public class OpportunitiesController(
                 ContactId = o.ContactId,
                 ContactName = o.Contact is null ? null : $"{o.Contact.FirstName} {o.Contact.LastName}".Trim(),
                 ProductId = o.ProductId,
-                ProductName = o.Product!.Name,
+                ProductName = o.Product?.Name,
                 BusinessLine = o.Product.BusinessLine,
                 PipelineStageId = o.PipelineStageId,
                 PipelineStageKey = o.PipelineStage?.Key ?? "",

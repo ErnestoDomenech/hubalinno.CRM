@@ -9,8 +9,9 @@ public class Opportunity
     public Account? Account { get; set; }
     public int? ContactId { get; set; }
     public Contact? Contact { get; set; }
-    public int ProductId { get; set; }
+    public int? ProductId { get; set; }
     public Product? Product { get; set; }
+    public OpportunityType OpportunityType { get; set; } = OpportunityType.Commercial;
 
     /// <summary>
     /// Etapa heredada del MVP inicial. Ya no se escribe en altas nuevas ni se expone en la API:
