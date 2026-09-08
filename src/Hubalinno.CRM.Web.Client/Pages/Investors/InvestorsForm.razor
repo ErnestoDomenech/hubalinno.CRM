@@ -81,6 +81,22 @@
                 <option value="@RelationshipTemperature.Active">Active</option>
             </InputSelect>
         </div>
+        <div class="mb-3">
+            <label class="form-label">Pipeline stage</label>
+
+            <InputSelect class="form-select"
+                         @bind-Value="model.PipelineStage">
+                <option value="@InvestorPipelineStage.Target">Target</option>
+                <option value="@InvestorPipelineStage.Research">Research</option>
+                <option value="@InvestorPipelineStage.WarmIntro">Warm intro</option>
+                <option value="@InvestorPipelineStage.Contacted">Contacted</option>
+                <option value="@InvestorPipelineStage.Conversation">Conversation</option>
+                <option value="@InvestorPipelineStage.MaterialsSent">Materials sent</option>
+                <option value="@InvestorPipelineStage.DueDiligence">Due diligence</option>
+                <option value="@InvestorPipelineStage.Investing">Investing</option>
+                <option value="@InvestorPipelineStage.Passed">Passed</option>
+            </InputSelect>
+        </div>
     </div>
 
     <div class="mb-3">
@@ -142,7 +158,8 @@
 @code {
     private InvestorDto model = new()
     {
-        RelationshipTemperature = RelationshipTemperature.Cold
+        RelationshipTemperature = RelationshipTemperature.Cold,
+        PipelineStage = InvestorPipelineStage.Target
     };
 
     private bool saving;

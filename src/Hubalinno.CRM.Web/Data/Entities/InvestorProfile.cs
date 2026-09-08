@@ -24,10 +24,13 @@ namespace Hubalinno.CRM.Web.Data.Entities
         public string? WarmIntroRoute { get; set; }
 
         public RelationshipTemperature RelationshipTemperature { get; set; }
+        public InvestorPipelineStage PipelineStage { get; set; } = InvestorPipelineStage.Target;
 
         public DateTime? LastInteraction { get; set; }
 
         public string? NextAction { get; set; }
         public DateTime? NextActionDate { get; set; }
+
+        
     }
 }

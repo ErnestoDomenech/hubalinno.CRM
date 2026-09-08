@@ -51,6 +51,7 @@ public class InvestorsController(ApplicationDbContext db) : ControllerBase
         var account = new Account
         {
             AccountType = AccountType.Company,
+            AccountCategory = AccountCategory.Investor,
             CompanyName = dto.InvestorName.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -75,6 +76,7 @@ public class InvestorsController(ApplicationDbContext db) : ControllerBase
             WarmIntroRoute = dto.WarmIntroRoute,
 
             RelationshipTemperature = dto.RelationshipTemperature,
+            PipelineStage = dto.PipelineStage,
 
             LastInteraction = dto.LastInteraction,
 
@@ -118,6 +120,45 @@ public class InvestorsController(ApplicationDbContext db) : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{accountId:int}")]
+    public async Task<IActionResult> Update(int accountId, InvestorDto dto)
+    {
+        var investor = await db.InvestorProfiles
+            .Include(i => i.Account)
+            .FirstOrDefaultAsync(i => i.AccountId == accountId);
+
+        if (investor is null)
+        {
+            return NotFound();
+        }
+
+        if (investor.Account is not null)
+        {
+            investor.Account.CompanyName = dto.InvestorName?.Trim();
+            investor.Account.UpdatedAt = DateTime.UtcNow;
+            investor.Account.AccountCategory = AccountCategory.Investor;
+        }
+
+        investor.InvestmentStage = dto.InvestmentStage;
+        investor.TypicalTicketMin = dto.TypicalTicketMin;
+        investor.TypicalTicketMax = dto.TypicalTicketMax;
+        investor.Thesis = dto.Thesis;
+        investor.Geography = dto.Geography;
+        investor.ThesisFit = dto.ThesisFit;
+        investor.AccessScore = dto.AccessScore;
+        investor.PortfolioConflict = dto.PortfolioConflict;
+        investor.WarmIntroRoute = dto.WarmIntroRoute;
+        investor.RelationshipTemperature = dto.RelationshipTemperature;
+        investor.PipelineStage = dto.PipelineStage;
+        investor.LastInteraction = dto.LastInteraction;
+        investor.NextAction = dto.NextAction;
+        investor.NextActionDate = dto.NextActionDate;
+
+        await db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     private static InvestorDto ToDto(InvestorProfile investor)
     {
         var primaryContact = investor.Account?.Contacts
@@ -152,6 +193,8 @@ public class InvestorsController(ApplicationDbContext db) : ControllerBase
             WarmIntroRoute = investor.WarmIntroRoute,
 
             RelationshipTemperature = investor.RelationshipTemperature,
+
+            PipelineStage = investor.PipelineStage,
 
             LastInteraction = investor.LastInteraction,
 

@@ -7,19 +7,35 @@ namespace Hubalinno.CRM.Web.Client.Services;
 public class AccountsApiClient(HttpClient http)
 {
     public async Task<List<AccountDto>> GetAllAsync(
-        AccountType? type = null,
-        string? search = null,
-        BusinessLine? businessLine = null,
-        LeadPriority? leadPriority = null,
-        ContactStatusFilter? contactStatus = null)
+    AccountType? type = null,
+    string? search = null,
+    BusinessLine? businessLine = null,
+    LeadPriority? leadPriority = null,
+    ContactStatusFilter? contactStatus = null,
+    AccountCategory? category = null)
     {
         var query = new List<string>();
-        if (type.HasValue) query.Add($"type={type}");
-        if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search)}");
-        if (businessLine.HasValue) query.Add($"businessLine={businessLine}");
-        if (leadPriority.HasValue) query.Add($"leadPriority={leadPriority}");
-        if (contactStatus.HasValue) query.Add($"contactStatus={contactStatus}");
-        var url = "api/accounts" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+
+        if (type.HasValue)
+            query.Add($"type={type}");
+
+        if (!string.IsNullOrWhiteSpace(search))
+            query.Add($"search={Uri.EscapeDataString(search)}");
+
+        if (businessLine.HasValue)
+            query.Add($"businessLine={businessLine}");
+
+        if (leadPriority.HasValue)
+            query.Add($"leadPriority={leadPriority}");
+
+        if (contactStatus.HasValue)
+            query.Add($"contactStatus={contactStatus}");
+
+        if (category.HasValue)
+            query.Add($"category={category}");
+
+        var url = "api/accounts" +
+                  (query.Count > 0 ? "?" + string.Join("&", query) : "");
 
         return await http.GetFromJsonAsync<List<AccountDto>>(url) ?? [];
     }

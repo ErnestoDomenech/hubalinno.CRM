@@ -24,4 +24,10 @@ public class InvestorsApiClient(HttpClient http)
         var response = await http.DeleteAsync($"api/investors/{accountId}");
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task UpdateAsync(int accountId, InvestorDto dto)
+    {
+        var response = await http.PutAsJsonAsync($"api/investors/{accountId}", dto);
+        response.EnsureSuccessStatusCode();
+    }
 }

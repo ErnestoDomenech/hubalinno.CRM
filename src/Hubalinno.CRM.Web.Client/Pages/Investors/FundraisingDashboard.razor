@@ -1,0 +1,274 @@
+﻿@page "/fundraising"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject InvestorsApiClient InvestorsApi
+@inject NavigationManager Nav
+
+<PageTitle>Fundraising Dashboard</PageTitle>
+
+<div class="mb-4">
+    <h1 class="hub-page-title mb-1">Fundraising Dashboard</h1>
+    <div class="hub-subtitle">
+        Investor pipeline, relationship health and next actions
+    </div>
+</div>
+
+@if (investors is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="row mb-4">
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Targets</div>
+                    <div class="hub-metric-value">@investors.Count</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Active relationships</div>
+                    <div class="hub-metric-value">@ActiveRelationships</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Overdue</div>
+                    <div class="hub-metric-value">@OverdueActions</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Next 7 days</div>
+                    <div class="hub-metric-value">@NextSevenDays</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Pipeline</h5>
+
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Stage</th>
+                                <th class="text-end">Investors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var stage in PipelineSummary)
+                            {
+                                <tr>
+                                    <td>@PipelineStageLabel(stage.Stage)</td>
+                                    <td class="text-end fw-semibold">@stage.Count</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Relationship health</h5>
+
+                    <dl class="row mb-0">
+                        <dt class="col-8">Cold</dt>
+                        <dd class="col-4 text-end">@ColdRelationships</dd>
+
+                        <dt class="col-8">Warm</dt>
+                        <dd class="col-4 text-end">@WarmRelationships</dd>
+
+                        <dt class="col-8">Active</dt>
+                        <dd class="col-4 text-end">@ActiveRelationships</dd>
+
+                        <dt class="col-8">No next action</dt>
+                        <dd class="col-4 text-end">@NoNextAction</dd>
+
+                        <dt class="col-8">No primary contact</dt>
+                        <dd class="col-4 text-end">@NoPrimaryContact</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-7 mb-4">
+            <div class="card hub-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Priority investors</h5>
+
+                    @if (!PriorityInvestors.Any())
+                    {
+                        <p class="text-muted mb-0">No priority actions right now.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Investor</th>
+                                    <th>Pipeline</th>
+                                    <th>Next action</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var investor in PriorityInvestors)
+                                {
+                                    <tr style="cursor:pointer"
+                                        @onclick='() => Nav.NavigateTo($"/investors/{investor.AccountId}")'>
+                                        <td class="fw-semibold">@investor.InvestorName</td>
+                                        <td>@PipelineStageLabel(investor.PipelineStage)</td>
+                                        <td>@(investor.NextAction ?? "—")</td>
+                                        <td class="@NextActionDateCss(investor)">
+                                            @(investor.NextActionDate?.ToString("dd/MM/yyyy") ?? "—")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mb-4">
+            <div class="card hub-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Missing next action</h5>
+
+                    @if (!InvestorsWithoutNextAction.Any())
+                    {
+                        <p class="text-muted mb-0">All active targets have a next action.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var investor in InvestorsWithoutNextAction)
+                            {
+                                <li class="list-group-item px-0">
+                                    <a href="@($"/investors/{investor.AccountId}")"
+                                       class="text-decoration-none">
+                                        @investor.InvestorName
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<InvestorDto>? investors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        investors = await InvestorsApi.GetAllAsync();
+    }
+
+    private int ActiveRelationships =>
+        investors?.Count(i =>
+            i.RelationshipTemperature == RelationshipTemperature.Active) ?? 0;
+
+    private int WarmRelationships =>
+        investors?.Count(i =>
+            i.RelationshipTemperature == RelationshipTemperature.Warm) ?? 0;
+
+    private int ColdRelationships =>
+        investors?.Count(i =>
+            i.RelationshipTemperature == RelationshipTemperature.Cold) ?? 0;
+
+    private int OverdueActions =>
+        investors?.Count(i =>
+            i.NextActionDate.HasValue &&
+            i.NextActionDate.Value.Date < DateTime.Today) ?? 0;
+
+    private int NextSevenDays =>
+        investors?.Count(i =>
+            i.NextActionDate.HasValue &&
+            i.NextActionDate.Value.Date >= DateTime.Today &&
+            i.NextActionDate.Value.Date <= DateTime.Today.AddDays(7)) ?? 0;
+
+    private int NoNextAction =>
+        investors?.Count(i =>
+            i.PipelineStage != InvestorPipelineStage.Passed &&
+            !i.NextActionDate.HasValue) ?? 0;
+
+    private IEnumerable<(InvestorPipelineStage Stage, int Count)> PipelineSummary =>
+        Enum.GetValues<InvestorPipelineStage>()
+            .Select(stage => (
+                Stage: stage,
+                Count: investors?.Count(i => i.PipelineStage == stage) ?? 0
+            ));
+
+    private IEnumerable<InvestorDto> PriorityInvestors =>
+    investors?
+        .Where(i =>
+            i.PipelineStage != InvestorPipelineStage.Passed &&
+            i.NextActionDate.HasValue)
+        .OrderBy(i => i.NextActionDate)
+        .Take(5)
+    ?? Enumerable.Empty<InvestorDto>();
+
+    private IEnumerable<InvestorDto> InvestorsWithoutNextAction =>
+    investors?
+        .Where(i =>
+            i.PipelineStage != InvestorPipelineStage.Passed &&
+            !i.NextActionDate.HasValue)
+        .OrderByDescending(i => i.ThesisFit)
+        .ThenByDescending(i => i.AccessScore)
+    ?? Enumerable.Empty<InvestorDto>();
+
+    private static string PipelineStageLabel(InvestorPipelineStage stage)
+        => stage switch
+        {
+            InvestorPipelineStage.Target => "Target",
+            InvestorPipelineStage.Research => "Research",
+            InvestorPipelineStage.WarmIntro => "Warm intro",
+            InvestorPipelineStage.Contacted => "Contacted",
+            InvestorPipelineStage.Conversation => "Conversation",
+            InvestorPipelineStage.MaterialsSent => "Materials sent",
+            InvestorPipelineStage.DueDiligence => "Due diligence",
+            InvestorPipelineStage.Investing => "Investing",
+            InvestorPipelineStage.Passed => "Passed",
+            _ => stage.ToString()
+        };
+
+    private static string NextActionDateCss(InvestorDto investor)
+    {
+        if (!investor.NextActionDate.HasValue)
+            return "";
+
+        return investor.NextActionDate.Value.Date < DateTime.Today
+            ? "text-danger fw-semibold"
+            : "";
+    }
+
+    private int NoPrimaryContact =>
+    investors?.Count(i =>
+        i.PipelineStage != InvestorPipelineStage.Passed &&
+        !i.PrimaryContactId.HasValue) ?? 0;
+}

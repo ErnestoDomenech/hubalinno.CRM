@@ -34,4 +34,6 @@ public class AccountDto
     public string DisplayName => AccountType == AccountType.Company
         ? (CompanyName ?? "")
         : $"{FirstName} {LastName}".Trim();
+
+    public AccountCategory AccountCategory { get; set; } = AccountCategory.Customer;
 }

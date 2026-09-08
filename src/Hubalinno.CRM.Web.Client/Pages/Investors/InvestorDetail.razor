@@ -1,0 +1,288 @@
+﻿@page "/investors/{AccountId:int}"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject InvestorsApiClient InvestorsApi
+@inject NavigationManager Nav
+
+<PageTitle>Investor</PageTitle>
+
+@if (investor is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="hub-page-title mb-1">@investor.InvestorName</h1>
+
+            <div class="d-flex gap-2 align-items-center">
+                <span class="@TemperatureCss(investor.RelationshipTemperature)">
+                    @TemperatureLabel(investor.RelationshipTemperature)
+                </span>
+
+                @if (!string.IsNullOrWhiteSpace(investor.InvestmentStage))
+                {
+                    <span class="badge rounded-pill text-bg-light">
+                        @investor.InvestmentStage
+                    </span>
+                }
+                <span class="badge rounded-pill text-bg-primary">
+                    @PipelineStageLabel(investor.PipelineStage)
+                </span>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary"
+                    @onclick='() => Nav.NavigateTo("/investors")'>
+                Back
+            </button>
+
+            <button class="btn hub-btn-primary"
+                    @onclick='() => Nav.NavigateTo($"/investors/{AccountId}/edit")'>
+                Edit investor
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Ticket</div>
+                    <div class="fw-semibold fs-5">
+                        @TicketLabel()
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Geografía</div>
+                    <div class="fw-semibold fs-5">
+                        @(investor.Geography ?? "—")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Thesis fit</div>
+                    <div class="hub-metric-value">
+                        @ScoreLabel(investor.ThesisFit)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <div class="hub-metric-label">Access score</div>
+                    <div class="hub-metric-value">
+                        @ScoreLabel(investor.AccessScore)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Investment thesis</h5>
+
+                    <p class="mb-0">
+                        @(investor.Thesis ?? "Sin información.")
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Contacto principal</h5>
+
+                    <p class="mb-0">
+                        @(investor.PrimaryContactName ?? "No definido")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Relación</h5>
+
+                    <dl class="row mb-0">
+                        <dt class="col-5">Última interacción</dt>
+                        <dd class="col-7">
+                            @(investor.LastInteraction?.ToString("dd/MM/yyyy") ?? "—")
+                        </dd>
+
+                        <dt class="col-5">Próxima acción</dt>
+                        <dd class="col-7">
+                            @(investor.NextAction ?? "—")
+                        </dd>
+
+                        <dt class="col-5">Fecha próxima acción</dt>
+                        <dd class="col-7">
+                            @(investor.NextActionDate?.ToString("dd/MM/yyyy") ?? "—")
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card hub-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Warm intro route</h5>
+
+                    <p class="mb-0">
+                        @(investor.WarmIntroRoute ?? "No definida.")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card hub-card">
+                <div class="card-body">
+                    <h5 class="card-title">Portfolio conflict</h5>
+
+                    <p class="mb-0">
+                        @(investor.PortfolioConflict ?? "No evaluado.")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card hub-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">Contacts</h5>
+                            <div class="text-muted small">
+                                Investor partners and relationship contacts
+                            </div>
+                        </div>
+
+                        <button class="btn btn-outline-primary btn-sm" disabled>
+                            Add contact
+                        </button>
+                    </div>
+
+                    @if (investor.PrimaryContactId.HasValue)
+                    {
+                        <div>
+                            <strong>@investor.PrimaryContactName</strong>
+                            <span class="badge rounded-pill text-bg-light ms-2">
+                                Primary
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">
+                            No contacts yet.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int AccountId { get; set; }
+
+    private InvestorDto? investor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        investor = await InvestorsApi.GetByAccountIdAsync(AccountId);
+    }
+
+    private string TicketLabel()
+    {
+        if (investor is null)
+            return "—";
+
+        if (investor.TypicalTicketMin.HasValue &&
+            investor.TypicalTicketMax.HasValue)
+        {
+            return $"{investor.TypicalTicketMin.Value:C0} – {investor.TypicalTicketMax.Value:C0}";
+        }
+
+        if (investor.TypicalTicketMin.HasValue)
+        {
+            return $"Desde {investor.TypicalTicketMin.Value:C0}";
+        }
+
+        if (investor.TypicalTicketMax.HasValue)
+        {
+            return $"Hasta {investor.TypicalTicketMax.Value:C0}";
+        }
+
+        return "—";
+    }
+
+    private static string ScoreLabel(int score)
+        => score > 0 ? $"{score}/5" : "—";
+
+    private static string TemperatureLabel(RelationshipTemperature temperature)
+        => temperature switch
+        {
+            RelationshipTemperature.Cold => "Cold",
+            RelationshipTemperature.Warm => "Warm",
+            RelationshipTemperature.Active => "Active",
+            _ => temperature.ToString()
+        };
+
+    private static string TemperatureCss(RelationshipTemperature temperature)
+        => temperature switch
+        {
+            RelationshipTemperature.Cold =>
+                "badge rounded-pill hub-badge-cold",
+
+            RelationshipTemperature.Warm =>
+                "badge rounded-pill hub-badge-warm",
+
+            RelationshipTemperature.Active =>
+                "badge rounded-pill hub-badge-active",
+
+            _ =>
+                "badge rounded-pill text-bg-secondary"
+        };
+
+    private static string PipelineStageLabel(InvestorPipelineStage stage)
+        => stage switch
+        {
+            InvestorPipelineStage.Target => "Target",
+            InvestorPipelineStage.Research => "Research",
+            InvestorPipelineStage.WarmIntro => "Warm intro",
+            InvestorPipelineStage.Contacted => "Contacted",
+            InvestorPipelineStage.Conversation => "Conversation",
+            InvestorPipelineStage.MaterialsSent => "Materials sent",
+            InvestorPipelineStage.DueDiligence => "Due diligence",
+            InvestorPipelineStage.Investing => "Investing",
+            InvestorPipelineStage.Passed => "Passed",
+            _ => stage.ToString()
+        };
+}

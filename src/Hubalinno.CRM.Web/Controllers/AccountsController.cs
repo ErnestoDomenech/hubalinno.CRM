@@ -16,17 +16,23 @@ public class AccountsController(ApplicationDbContext db, AccountBusinessLineServ
 {
     [HttpGet]
     public async Task<ActionResult<List<AccountDto>>> GetAll(
-        [FromQuery] AccountType? type,
-        [FromQuery] string? search,
-        [FromQuery] BusinessLine? businessLine,
-        [FromQuery] LeadPriority? leadPriority,
-        [FromQuery] ContactStatusFilter? contactStatus)
+    [FromQuery] AccountType? type = null,
+    [FromQuery] string? search = null,
+    [FromQuery] BusinessLine? businessLine = null,
+    [FromQuery] LeadPriority? leadPriority = null,
+    [FromQuery] ContactStatusFilter? contactStatus = null,
+    [FromQuery] AccountCategory? category = null)
     {
         var query = db.Accounts.AsQueryable();
 
         if (type.HasValue)
         {
             query = query.Where(a => a.AccountType == type.Value);
+        }
+
+        if (category.HasValue)
+        {
+            query = query.Where(a => a.AccountCategory == category.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -41,7 +47,10 @@ public class AccountsController(ApplicationDbContext db, AccountBusinessLineServ
 
         if (businessLine.HasValue)
         {
-            query = query.Where(a => db.AccountBusinessLines.Any(l => l.AccountId == a.Id && l.BusinessLine == businessLine.Value));
+            query = query.Where(a =>
+                db.AccountBusinessLines.Any(l =>
+                    l.AccountId == a.Id &&
+                    l.BusinessLine == businessLine.Value));
         }
 
         if (leadPriority.HasValue)
@@ -53,21 +62,29 @@ public class AccountsController(ApplicationDbContext db, AccountBusinessLineServ
         {
             var today = DateTime.Today;
             var tomorrow = today.AddDays(1);
+
             query = query.Where(a => db.Activities.Any(act =>
                 act.AccountId == a.Id
                 && act.Status == ActivityStatus.Pending
-                && act.DueDate >= today && act.DueDate < tomorrow
-                && (!businessLine.HasValue || act.BusinessLine == businessLine.Value)));
+                && act.DueDate >= today
+                && act.DueDate < tomorrow
+                && (!businessLine.HasValue ||
+                    act.BusinessLine == businessLine.Value)));
         }
         else if (contactStatus == ContactStatusFilter.NeverContacted)
         {
             query = query.Where(a => db.AccountBusinessLines.Any(l =>
                 l.AccountId == a.Id
-                && (!businessLine.HasValue || l.BusinessLine == businessLine.Value)
+                && (!businessLine.HasValue ||
+                    l.BusinessLine == businessLine.Value)
                 && l.LastContactedAt == null));
         }
 
-        var accounts = await query.OrderBy(a => a.CompanyName).ThenBy(a => a.LastName).ToListAsync();
+        var accounts = await query
+            .OrderBy(a => a.CompanyName)
+            .ThenBy(a => a.LastName)
+            .ToListAsync();
+
         return accounts.Select(ToDto).ToList();
     }
 
@@ -168,6 +185,7 @@ public class AccountsController(ApplicationDbContext db, AccountBusinessLineServ
         account.PainHypothesis = dto.PainHypothesis;
         account.IcpScore = dto.IcpScore;
         account.DoNotContact = dto.DoNotContact;
+        account.AccountCategory = dto.AccountCategory;
     }
 
     private static AccountDto ToDto(Account a) => new()
@@ -198,5 +216,6 @@ public class AccountsController(ApplicationDbContext db, AccountBusinessLineServ
         PainHypothesis = a.PainHypothesis,
         IcpScore = a.IcpScore,
         DoNotContact = a.DoNotContact,
+        AccountCategory = a.AccountCategory,
     };
 }

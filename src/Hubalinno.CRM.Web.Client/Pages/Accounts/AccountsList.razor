@@ -17,6 +17,19 @@
         </select>
     </div>
     <div class="col-auto">
+        <label class="form-label">Categoría</label>
+        <select class="form-select"
+                @bind="selectedCategory"
+                @bind:after="LoadAsync">
+            <option value="">Todas</option>
+            <option value="@AccountCategory.Customer">Cliente</option>
+            <option value="@AccountCategory.Investor">Investor</option>
+            <option value="@AccountCategory.Partner">Partner</option>
+            <option value="@AccountCategory.Supplier">Supplier</option>
+            <option value="@AccountCategory.Other">Other</option>
+        </select>
+    </div>
+    <div class="col-auto">
         <label class="form-label">Buscar</label>
         <input class="form-control" @bind="search" @bind:event="oninput" @bind:after="LoadAsync" placeholder="Nombre o email" />
     </div>
@@ -40,6 +53,7 @@ else
             <tr>
                 <th>Nombre</th>
                 <th>Tipo</th>
+                <th>Categoría</th>
                 <th>Email</th>
                 <th>Teléfono</th>
                 <th>Ciudad</th>
@@ -51,6 +65,7 @@ else
                 <tr style="cursor:pointer" @onclick='() => Nav.NavigateTo($"/accounts/{account.Id}")'>
                     <td>@account.DisplayName</td>
                     <td>@(account.AccountType == AccountType.Company ? "Empresa" : "Profesional")</td>
+                    <td>@CategoryLabel(account.AccountCategory)</td>
                     <td>@account.Email</td>
                     <td>@account.Phone</td>
                     <td>@account.City</td>
@@ -64,12 +79,36 @@ else
     private List<AccountDto>? accounts;
     private string selectedType = "";
     private string search = "";
+    private string selectedCategory = "";
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
     private async Task LoadAsync()
     {
-        AccountType? type = string.IsNullOrEmpty(selectedType) ? null : Enum.Parse<AccountType>(selectedType);
-        accounts = await AccountsApi.GetAllAsync(type, search);
+        AccountType? type =
+        string.IsNullOrEmpty(selectedType)
+            ? null
+            : Enum.Parse<AccountType>(selectedType);
+
+        AccountCategory? category =
+            string.IsNullOrEmpty(selectedCategory)
+                ? null
+                : Enum.Parse<AccountCategory>(selectedCategory);
+
+        accounts = await AccountsApi.GetAllAsync(
+            type: type,
+            search: search,
+            category: category);
     }
+
+    private static string CategoryLabel(AccountCategory category)
+    => category switch
+    {
+        AccountCategory.Customer => "Cliente",
+        AccountCategory.Investor => "Investor",
+        AccountCategory.Partner => "Partner",
+        AccountCategory.Supplier => "Supplier",
+        AccountCategory.Other => "Other",
+        _ => category.ToString()
+    };
 }

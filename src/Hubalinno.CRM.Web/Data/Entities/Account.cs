@@ -36,4 +36,6 @@ public class Account
 
     public List<Contact> Contacts { get; set; } = [];
     public InvestorProfile? InvestorProfile { get; set; }
+
+    public AccountCategory AccountCategory { get; set; } = AccountCategory.Customer;
 }

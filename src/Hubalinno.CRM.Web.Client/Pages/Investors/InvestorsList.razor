@@ -1,6 +1,7 @@
 ﻿@page "/investors"
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject InvestorsApiClient InvestorsApi
+@inject NavigationManager Nav
 
 <PageTitle>Investors</PageTitle>
 
@@ -24,47 +25,99 @@
 else
 {
     <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 hub-card">
-                <div class="card-body">
-                    <div class="hub-metric-label">Targets</div>
-                    <div class="hub-metric-value">@investors.Count</div>
+
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 hub-card">
+                    <div class="card-body">
+                        <div class="hub-metric-label">Targets</div>
+                        <div class="hub-metric-value">@investors.Count</div>
+                    </div>
                 </div>
             </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 hub-card">
+                    <div class="card-body">
+                        <div class="hub-metric-label">Active relationships</div>
+                        <div class="hub-metric-value">@ActiveRelationships</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 hub-card">
+                    <div class="card-body">
+                        <div class="hub-metric-label">Overdue</div>
+                        <div class="hub-metric-value">@OverdueActions</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 hub-card">
+                    <div class="card-body">
+                        <div class="hub-metric-label">Next 7 days</div>
+                        <div class="hub-metric-value">@NextSevenDays</div>
+                    </div>
+                </div>
+            </div>
+
+    </div>
+    <div class="row mb-4 g-2 align-items-end">
+
+        <div class="col-md-3">
+            <label class="form-label">Search</label>
+            <input class="form-control"
+                   @bind="search"
+                   @bind:event="oninput"
+                   placeholder="Investor or partner..." />
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 hub-card">
-                <div class="card-body">
-                    <div class="hub-metric-label">Relaciones activas</div>
-                    <div class="hub-metric-value">@ActiveRelationships</div>
-                </div>
-            </div>
+        <div class="col-md-3">
+            <label class="form-label">Pipeline</label>
+
+            <select class="form-select" @bind="selectedPipeline">
+                <option value="">All stages</option>
+                <option value="@InvestorPipelineStage.Target">Target</option>
+                <option value="@InvestorPipelineStage.Research">Research</option>
+                <option value="@InvestorPipelineStage.WarmIntro">Warm intro</option>
+                <option value="@InvestorPipelineStage.Contacted">Contacted</option>
+                <option value="@InvestorPipelineStage.Conversation">Conversation</option>
+                <option value="@InvestorPipelineStage.MaterialsSent">Materials sent</option>
+                <option value="@InvestorPipelineStage.DueDiligence">Due diligence</option>
+                <option value="@InvestorPipelineStage.Investing">Investing</option>
+                <option value="@InvestorPipelineStage.Passed">Passed</option>
+            </select>
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 hub-card">
-                <div class="card-body">
-                    <div class="hub-metric-label">Warm</div>
-                    <div class="hub-metric-value">@WarmRelationships</div>
-                </div>
-            </div>
+        <div class="col-md-3">
+            <label class="form-label">Temperature</label>
+
+            <select class="form-select" @bind="selectedTemperature">
+                <option value="">All</option>
+                <option value="@RelationshipTemperature.Cold">Cold</option>
+                <option value="@RelationshipTemperature.Warm">Warm</option>
+                <option value="@RelationshipTemperature.Active">Active</option>
+            </select>
         </div>
 
-        <div class="col-md-3 mb-3">
-            <div class="card h-100 hub-card">
-                <div class="card-body">
-                    <div class="hub-metric-label">Próximas acciones</div>
-                    <div class="hub-metric-value">@PendingNextActions</div>
-                </div>
-            </div>
+        <div class="col-md-3">
+            <label class="form-label">Next action</label>
+
+            <select class="form-select" @bind="selectedNextAction">
+                <option value="">All</option>
+                <option value="overdue">Overdue</option>
+                <option value="7days">Next 7 days</option>
+                <option value="none">No next action</option>
+            </select>
         </div>
+
     </div>
 
-    @if (investors.Count == 0)
+    @if (!FilteredInvestors.Any())
     {
         <div class="alert alert-secondary">
-            Todavía no hay inversores registrados.
+            No investors match the current filters.
         </div>
     }
     else
@@ -79,6 +132,7 @@ else
                         <th>Fit</th>
                         <th>Access</th>
                         <th>Temperature</th>
+                        <th>Pipeline</th>
                         <th>Last interaction</th>
                         <th>Next action</th>
                         <th>Date</th>
@@ -87,9 +141,10 @@ else
                 </thead>
 
                 <tbody>
-                    @foreach (var investor in investors)
+                    @foreach (var investor in FilteredInvestors)
                     {
-                        <tr>
+                        <tr style="cursor:pointer"
+                            @onclick='() => Nav.NavigateTo($"/investors/{investor.AccountId}")'>
                             <td>
                                 <strong>@investor.InvestorName</strong>
                             </td>
@@ -121,6 +176,12 @@ else
                             </td>
 
                             <td>
+                                <span class="badge rounded-pill text-bg-light">
+                                    @PipelineStageLabel(investor.PipelineStage)
+                                </span>
+                            </td>
+
+                            <td>
                                 @(investor.LastInteraction?.ToString("dd/MM/yyyy") ?? "—")
                             </td>
 
@@ -130,13 +191,14 @@ else
                                 </span>
                             </td>
 
-                            <td>
+                            <td class="@NextActionDateCss(investor)">
                                 @(investor.NextActionDate?.ToString("dd/MM/yyyy") ?? "—")
                             </td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-danger"
-                                        @onclick="() => DeleteAsync(investor.AccountId)">
-                                    Eliminar
+                                        @onclick="() => DeleteAsync(investor.AccountId)"
+                                        @onclick:stopPropagation="true">
+                                    Delete
                                 </button>
                             </td>
                         </tr>
@@ -153,12 +215,19 @@ else
     protected override Task OnInitializedAsync() => LoadAsync();
 
     private int ActiveRelationships =>
-        investors?.Count(i =>
-            i.RelationshipTemperature == RelationshipTemperature.Active) ?? 0;
+    investors?.Count(i =>
+        i.RelationshipTemperature == RelationshipTemperature.Active) ?? 0;
 
-    private int WarmRelationships =>
+    private int OverdueActions =>
         investors?.Count(i =>
-            i.RelationshipTemperature == RelationshipTemperature.Warm) ?? 0;
+            i.NextActionDate.HasValue &&
+            i.NextActionDate.Value.Date < DateTime.Today) ?? 0;
+
+    private int NextSevenDays =>
+        investors?.Count(i =>
+            i.NextActionDate.HasValue &&
+            i.NextActionDate.Value.Date >= DateTime.Today &&
+            i.NextActionDate.Value.Date <= DateTime.Today.AddDays(7)) ?? 0;
 
     private int PendingNextActions =>
         investors?.Count(i =>
@@ -175,6 +244,11 @@ else
             RelationshipTemperature.Active => "Active",
             _ => temperature.ToString()
         };
+
+    private string search = "";
+    private string selectedPipeline = "";
+    private string selectedTemperature = "";
+    private string selectedNextAction = "";
 
     private async Task DeleteAsync(int accountId)
     {
@@ -202,4 +276,106 @@ else
         _ =>
             "badge rounded-pill text-bg-secondary"
     };
+
+    private static string PipelineStageLabel(InvestorPipelineStage stage)
+    => stage switch
+    {
+        InvestorPipelineStage.Target => "Target",
+        InvestorPipelineStage.Research => "Research",
+        InvestorPipelineStage.WarmIntro => "Warm intro",
+        InvestorPipelineStage.Contacted => "Contacted",
+        InvestorPipelineStage.Conversation => "Conversation",
+        InvestorPipelineStage.MaterialsSent => "Materials sent",
+        InvestorPipelineStage.DueDiligence => "Due diligence",
+        InvestorPipelineStage.Investing => "Investing",
+        InvestorPipelineStage.Passed => "Passed",
+        _ => stage.ToString()
+    };
+
+    private IEnumerable<InvestorDto> FilteredInvestors
+    {
+        get
+        {
+            if (investors is null)
+                return [];
+
+            IEnumerable<InvestorDto> result = investors;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+
+                result = result.Where(i =>
+                    i.InvestorName.Contains(
+                        term,
+                        StringComparison.OrdinalIgnoreCase)
+                    ||
+                    (i.PrimaryContactName != null &&
+                     i.PrimaryContactName.Contains(
+                         term,
+                         StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedPipeline)
+                && Enum.TryParse<InvestorPipelineStage>(
+                    selectedPipeline,
+                    out var pipeline))
+            {
+                result = result.Where(i =>
+                    i.PipelineStage == pipeline);
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedTemperature)
+                && Enum.TryParse<RelationshipTemperature>(
+                    selectedTemperature,
+                    out var temperature))
+            {
+                result = result.Where(i =>
+                    i.RelationshipTemperature == temperature);
+            }
+
+            var today = DateTime.Today;
+
+            if (selectedNextAction == "overdue")
+            {
+                result = result.Where(i =>
+                    i.NextActionDate.HasValue &&
+                    i.NextActionDate.Value.Date < today);
+            }
+            else if (selectedNextAction == "7days")
+            {
+                var limit = today.AddDays(7);
+
+                result = result.Where(i =>
+                    i.NextActionDate.HasValue &&
+                    i.NextActionDate.Value.Date >= today &&
+                    i.NextActionDate.Value.Date <= limit);
+            }
+            else if (selectedNextAction == "none")
+            {
+                result = result.Where(i =>
+                    !i.NextActionDate.HasValue);
+            }
+
+            return result
+                .OrderBy(i =>
+                    i.PipelineStage == InvestorPipelineStage.Passed ? 1 : 0)
+                .ThenBy(i =>
+                    i.NextActionDate.HasValue ? 0 : 1)
+                .ThenBy(i => i.NextActionDate)
+                .ThenBy(i => i.InvestorName);
+        }
+    }
+
+    private static string NextActionDateCss(InvestorDto investor)
+    {
+        if (!investor.NextActionDate.HasValue)
+            return "";
+
+        return investor.NextActionDate.Value.Date < DateTime.Today
+            ? "text-danger fw-semibold"
+            : "";
+    }
+
+
 }

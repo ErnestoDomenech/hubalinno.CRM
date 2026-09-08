@@ -1,0 +1,197 @@
+﻿@page "/investors/{AccountId:int}/edit"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject InvestorsApiClient InvestorsApi
+@inject NavigationManager Nav
+
+<PageTitle>Editar inversor</PageTitle>
+
+@if (model is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <h1 class="hub-page-title mb-4">Editar inversor</h1>
+
+    <EditForm Model="model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nombre del fondo</label>
+                <InputText class="form-control" @bind-Value="model.InvestorName" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Investment stage</label>
+                <InputText class="form-control" @bind-Value="model.InvestmentStage" />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Ticket mínimo</label>
+                <InputNumber class="form-control" @bind-Value="model.TypicalTicketMin" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Ticket máximo</label>
+                <InputNumber class="form-control" @bind-Value="model.TypicalTicketMax" />
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Thesis</label>
+            <InputTextArea class="form-control" rows="4" @bind-Value="model.Thesis" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Geografía</label>
+            <InputText class="form-control" @bind-Value="model.Geography" />
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Thesis fit</label>
+                <InputNumber class="form-control" min="0" max="5" @bind-Value="model.ThesisFit" />
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Access score</label>
+                <InputNumber class="form-control" min="0" max="5" @bind-Value="model.AccessScore" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Relationship temperature</label>
+
+                <InputSelect class="form-select" @bind-Value="model.RelationshipTemperature">
+                    <option value="@RelationshipTemperature.Cold">Cold</option>
+                    <option value="@RelationshipTemperature.Warm">Warm</option>
+                    <option value="@RelationshipTemperature.Active">Active</option>
+                </InputSelect>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Pipeline stage</label>
+
+                <InputSelect class="form-select"
+                             @bind-Value="model.PipelineStage">
+                    <option value="@InvestorPipelineStage.Target">Target</option>
+                    <option value="@InvestorPipelineStage.Research">Research</option>
+                    <option value="@InvestorPipelineStage.WarmIntro">Warm intro</option>
+                    <option value="@InvestorPipelineStage.Contacted">Contacted</option>
+                    <option value="@InvestorPipelineStage.Conversation">Conversation</option>
+                    <option value="@InvestorPipelineStage.MaterialsSent">Materials sent</option>
+                    <option value="@InvestorPipelineStage.DueDiligence">Due diligence</option>
+                    <option value="@InvestorPipelineStage.Investing">Investing</option>
+                    <option value="@InvestorPipelineStage.Passed">Passed</option>
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Portfolio conflict</label>
+            <InputTextArea class="form-control" rows="3" @bind-Value="model.PortfolioConflict" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Warm intro route</label>
+            <InputTextArea class="form-control" rows="3" @bind-Value="model.WarmIntroRoute" />
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Última interacción</label>
+                <InputDate class="form-control" @bind-Value="model.LastInteraction" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha próxima acción</label>
+                <InputDate class="form-control" @bind-Value="model.NextActionDate" />
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Próxima acción</label>
+            <InputText class="form-control" @bind-Value="model.NextAction" />
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button class="btn hub-btn-primary" type="submit" disabled="@saving">
+                @(saving ? "Saving..." : "Save changes")
+            </button>
+
+            <button class="btn btn-outline-secondary"
+                    type="button"
+                    @onclick="Cancel">
+                Cancel
+            </button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int AccountId { get; set; }
+
+    private InvestorDto? model;
+    private bool saving;
+    private string? errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        model = await InvestorsApi.GetByAccountIdAsync(AccountId);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (model is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(model.InvestorName))
+        {
+            errorMessage = "El nombre del fondo es obligatorio.";
+            return;
+        }
+
+        if (model.ThesisFit < 0 || model.ThesisFit > 5)
+        {
+            errorMessage = "Thesis Fit debe estar entre 0 y 5.";
+            return;
+        }
+
+        if (model.AccessScore < 0 || model.AccessScore > 5)
+        {
+            errorMessage = "Access Score debe estar entre 0 y 5.";
+            return;
+        }
+
+        saving = true;
+        errorMessage = null;
+
+        try
+        {
+            await InvestorsApi.UpdateAsync(AccountId, model);
+            Nav.NavigateTo($"/investors/{AccountId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Nav.NavigateTo($"/investors/{AccountId}");
+    }
+}

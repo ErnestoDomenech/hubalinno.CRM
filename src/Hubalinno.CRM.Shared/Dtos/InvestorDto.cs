@@ -30,6 +30,8 @@ namespace Hubalinno.CRM.Shared.Dtos
 
         public RelationshipTemperature RelationshipTemperature { get; set; }
 
+        public InvestorPipelineStage PipelineStage { get; set; }
+
         public DateTime? LastInteraction { get; set; }
 
         public string? NextAction { get; set; }
