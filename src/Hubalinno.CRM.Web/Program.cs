@@ -31,20 +31,29 @@ var timeOnScoreOrigins = builder.Configuration
     .Get<string[]>()
     ?? ["https://timeon.es", "https://www.timeon.es"];
 
-if (builder.Environment.IsDevelopment())
-{
-    timeOnScoreOrigins = timeOnScoreOrigins
-        .Concat(["http://localhost:5173", "https://localhost:5173"])
-        .Distinct()
-        .ToArray();
-}
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("timeon-score", policy =>
-        policy.WithOrigins(timeOnScoreOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod());
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    return false;
+                }
+
+                return uri.Host is "localhost" or "127.0.0.1";
+            });
+        }
+        else
+        {
+            policy.WithOrigins(timeOnScoreOrigins);
+        }
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
 });
 
 builder.Services.AddRateLimiter(options =>
