@@ -80,6 +80,8 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.AddScoped<ActivityRollupService>();
 builder.Services.AddScoped<AccountBusinessLineService>();
+builder.Services.AddScoped<TimeOnScoreEmailService>();
+builder.Services.AddHttpClient("HubalinnoData");
 
 var app = builder.Build();
 
