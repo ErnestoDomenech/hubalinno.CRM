@@ -1,3 +1,5 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Hubalinno.CRM.Web.Components;
@@ -23,6 +25,33 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
+
+var timeOnScoreOrigins = builder.Configuration
+    .GetSection("TimeOnScore:AllowedOrigins")
+    .Get<string[]>()
+    ?? ["https://timeon.es", "https://www.timeon.es"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("timeon-score", policy =>
+        policy.WithOrigins(timeOnScoreOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("timeon-score", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -65,6 +94,9 @@ else
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+app.UseCors("timeon-score");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
