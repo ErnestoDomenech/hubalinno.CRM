@@ -16,7 +16,8 @@ namespace Hubalinno.CRM.Web.Controllers;
 [Route("api/public/timeon-score")]
 public class TimeOnScoreController(
     ApplicationDbContext db,
-    AccountBusinessLineService businessLineService) : ControllerBase
+    AccountBusinessLineService businessLineService,
+    TimeOnScoreEmailService emailService) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<TimeOnScoreSubmitResponse>> Submit(TimeOnScoreSubmitRequest request)
@@ -186,12 +187,26 @@ public class TimeOnScoreController(
             }
         }
 
+        var emailSent = await emailService.SendResultAsync(
+            email,
+            request.Name.Trim(),
+            companyName,
+            request.OverallScore,
+            request.RegistrationScore,
+            request.IncidentsScore,
+            request.AdministrationScore,
+            request.TraceabilityScore,
+            request.ExperienceScore,
+            request.WeakestDimension,
+            request.WantsContact);
+
         return Ok(new TimeOnScoreSubmitResponse
         {
             Accepted = true,
             AccountId = account.Id,
             ContactId = contact.Id,
             OpportunityId = opportunityId,
+            EmailSent = emailSent,
         });
     }
 
@@ -289,4 +304,5 @@ public sealed class TimeOnScoreSubmitResponse
     public int? AccountId { get; set; }
     public int? ContactId { get; set; }
     public int? OpportunityId { get; set; }
+    public bool EmailSent { get; set; }
 }
