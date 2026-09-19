@@ -31,6 +31,14 @@ var timeOnScoreOrigins = builder.Configuration
     .Get<string[]>()
     ?? ["https://timeon.es", "https://www.timeon.es"];
 
+if (builder.Environment.IsDevelopment())
+{
+    timeOnScoreOrigins = timeOnScoreOrigins
+        .Concat(["http://localhost:5173", "https://localhost:5173"])
+        .Distinct()
+        .ToArray();
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("timeon-score", policy =>
